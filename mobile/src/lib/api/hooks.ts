@@ -4,7 +4,7 @@ import {
   useMutation,
   useQueryClient,
 } from "@tanstack/react-query";
-import { fetchUsers, createUser, type User } from "./api";
+import { fetchUsers, createUser, type User } from "../api";
 
 export function useUsers() {
   return useQuery<User[]>({

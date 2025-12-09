@@ -1,7 +1,9 @@
+// src/auth/auth.service.ts
 import {
   Injectable,
   ConflictException,
   UnauthorizedException,
+  NotFoundException,
 } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
 import { JwtService } from "@nestjs/jwt";
@@ -47,6 +49,22 @@ export class AuthService {
     if (!ok) throw new UnauthorizedException("Invalid credentials");
 
     return this.sign(user.id, user.email);
+  }
+
+  // 🔹 NEW: get current user from DB (using id from JWT)
+  async getMe(userId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      throw new NotFoundException("User not found");
+    }
+
+    // strip passwordHash before returning
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { passwordHash, ...safeUser } = user;
+    return safeUser;
   }
 
   private sign(id: string, email: string) {

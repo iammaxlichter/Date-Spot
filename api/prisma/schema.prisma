@@ -10,10 +10,48 @@ datasource db {
 }
 
 model User {
-  id           String   @id @default(uuid())
-  email        String   @unique
+  id           String       @id @default(uuid())
+  email        String       @unique
   name         String?
   passwordHash String
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  // relation: one user -> many spot ratings
+  spotRatings  SpotRating[]
+}
+
+model Place {
+  id            String        @id @default(uuid())
+  name          String
+  latitude      Float
+  longitude     Float
+  address       String?
+  googlePlaceId String?       @unique
+
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  ratings       SpotRating[]
+}
+
+model SpotRating {
+  id              String   @id @default(uuid())
+
+  user            User     @relation(fields: [userId], references: [id])
+  userId          String
+
+  place           Place    @relation(fields: [placeId], references: [id])
+  placeId         String
+
+  atmosphereScore Int      // 1–10
+  dateScore       Int      // 1–10
+  recommend       Boolean
+  notes           String?
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // one rating per user per place
+  @@unique([userId, placeId], name: "userId_placeId")
 }

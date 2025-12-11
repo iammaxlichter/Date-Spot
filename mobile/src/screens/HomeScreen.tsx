@@ -1,37 +1,123 @@
-import { View, Text, TouchableOpacity, StyleSheet, Alert } from "react-native";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { useEffect } from "react";
+// src/screens/HomeScreen.tsx
+import React, { useEffect, useState } from "react";
+import { View, ActivityIndicator, Alert, Text } from "react-native";
+import MapView, { Marker, Region } from "react-native-maps";
+import * as Location from "expo-location";
+import axios from "axios";
 
-export default function HomeScreen({ navigation }: any) {
+const API_URL = "http://10.0.2.2:3000"; // <-- put YOUR machine's LAN IP here
+
+type Place = {
+  id: string;
+  name: string;
+  latitude: number;
+  longitude: number;
+  address?: string | null;
+  atmosphereAverage: number | null;
+  dateAverage: number | null;
+  totalRatings: number;
+};
+
+export default function HomeScreen() {
+  const [region, setRegion] = useState<Region | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [permissionDenied, setPermissionDenied] = useState(false);
+  const [spots, setSpots] = useState<Place[]>([]);
+
   useEffect(() => {
-    AsyncStorage.getItem("token").then(t =>
-      console.log("TOKEN IN HOME:", t)
-    );
-  }, []);
-  
-  const onLogout = async () => {
+  (async () => {
     try {
-      await AsyncStorage.removeItem("token");
-      navigation.replace("Login");
-    } catch {
-      Alert.alert("Error", "Failed to log out.");
+      // You can still request permission if you want, but it's optional now
+      // const { status } = await Location.requestForegroundPermissionsAsync();
+      // if (status !== "granted") { ... }
+
+      // TEMP: hard-code to Richardson / your Seoul place
+      const latitude = 32.977;
+      const longitude = -96.735;
+
+      const initialRegion: Region = {
+        latitude,
+        longitude,
+        latitudeDelta: 0.05,
+        longitudeDelta: 0.05,
+      };
+
+      setRegion(initialRegion);
+
+      const res = await axios.get<Place[]>(`${API_URL}/places`, {
+        params: {
+          latitude,
+          longitude,
+          radiusKm: 10,
+        },
+      });
+
+      console.log("Loaded spots:", res.data.length);
+      setSpots(res.data);
+    } catch (err) {
+      console.error(err);
+      Alert.alert("Error", "Failed to load nearby date spots.");
+    } finally {
+      setLoading(false);
     }
-  };
+  })();
+}, []);
+
+
+  if (!region) {
+    // only while we don't even have a fallback region
+    return (
+      <View
+        style={{
+          flex: 1,
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <ActivityIndicator size="large" />
+        <Text>Loading map…</Text>
+      </View>
+    );
+  }
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>You’re in 🎉</Text>
+    <View style={{ flex: 1 }}>
+      {permissionDenied && (
+        <View
+          style={{
+            padding: 8,
+            backgroundColor: "#fee",
+          }}
+        >
+          <Text>
+            Location permission denied. Showing a default area instead.
+          </Text>
+        </View>
+      )}
 
-      <TouchableOpacity style={styles.logoutBtn} onPress={onLogout}>
-        <Text style={styles.logoutText}>Logout</Text>
-      </TouchableOpacity>
+      <MapView
+        style={{ flex: 1 }}
+        initialRegion={region}
+        onRegionChangeComplete={setRegion}
+      >
+        {spots.map((spot) => (
+          <Marker
+            key={spot.id}
+            coordinate={{
+              latitude: spot.latitude,
+              longitude: spot.longitude,
+            }}
+            title={spot.name}
+            description={
+              spot.totalRatings > 0
+                ? `Atmosphere: ${spot.atmosphereAverage?.toFixed(
+                    1,
+                  )} · Date: ${spot.dateAverage?.toFixed(1)}`
+                : "No ratings yet"
+            }
+          />
+        ))}
+      </MapView>
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, padding: 24, justifyContent: "center", alignItems: "center" },
-  title: { fontSize: 24, fontWeight: "700", marginBottom: 24 },
-  logoutBtn: { backgroundColor: "#111", paddingVertical: 12, paddingHorizontal: 18, borderRadius: 8 },
-  logoutText: { color: "white", fontWeight: "700" },
-});

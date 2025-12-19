@@ -10,15 +10,18 @@ import { JwtService } from "@nestjs/jwt";
 import * as bcrypt from "bcryptjs";
 import { RegisterDto } from "./dto/register.dto";
 import { LoginDto } from "./dto/login.dto";
+import { BadRequestException } from "@nestjs/common";
 
 @Injectable()
 export class AuthService {
   constructor(
     private prisma: PrismaService,
     private jwt: JwtService,
-  ) {}
+  ) { }
 
   async register(dto: RegisterDto) {
+    if (!dto.email) throw new BadRequestException("Email is required");
+    if (!dto.password) throw new BadRequestException("Password is required");
     const existing = await this.prisma.user.findUnique({
       where: { email: dto.email },
     });

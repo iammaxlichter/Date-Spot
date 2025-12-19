@@ -8,6 +8,7 @@ export const styles = StyleSheet.create({
     left: 10,
     right: 10,
     zIndex: 10,
+    elevation: 10,
   },
   searchBar: {
     backgroundColor: "white",
@@ -22,10 +23,9 @@ export const styles = StyleSheet.create({
     fontSize: 14,
   },
 
-  // Wrapper so we can clip + shadow the scrollable list
   suggestionsWrapper: {
     marginTop: 4,
-    maxHeight: 160, // ~3 items tall
+    maxHeight: 160,
     borderRadius: 8,
     backgroundColor: "white",
     borderWidth: 1,
@@ -76,7 +76,6 @@ export const styles = StyleSheet.create({
     fontWeight: "600",
   },
 
-  // Bottom sheet (used by NewSpotSheet)
   bottomSheet: {
     position: "absolute",
     left: 0,
@@ -89,7 +88,8 @@ export const styles = StyleSheet.create({
     shadowColor: "#000",
     shadowOpacity: 0.2,
     shadowRadius: 8,
-    elevation: 5,
+    zIndex: 1000,
+    elevation: 20,
   },
   sheetTitle: {
     fontSize: 16,
@@ -138,5 +138,98 @@ export const styles = StyleSheet.create({
   saveText: {
     color: "#fff",
     fontWeight: "600",
+  },
+
+  pinGuideOverlay: {
+  position: "absolute",
+  top: 0,
+  left: 0,
+  right: 0,
+  bottom: 0,
+  zIndex: 999,     // was 5
+  elevation: 999,  // android
+},
+
+  pinGuideDim: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "rgba(0,0,0,0.4)",
+    zIndex: 5,
+  },
+
+  pinGuideCard: {
+    position: "absolute",
+    top: 40,
+    left: 20,
+    right: 20,
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    borderRadius: 16,
+    backgroundColor: "rgba(20,20,20,0.95)",
+    shadowColor: "#000",
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 8,
+    zIndex: 6,
+  },
+
+  pinGuideTitle: {
+    color: "white",
+    fontSize: 20,
+    fontWeight: "700",
+    marginBottom: 8,
+  },
+
+  pinGuideText: {
+    color: "rgba(255,255,255,0.9)",
+    fontSize: 15,
+    lineHeight: 22,
+  },
+
+  pinGuideActions: {
+    position: "absolute",
+    bottom: 40,
+    left: 20,
+    right: 20,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    zIndex: 6,
+  },
+
+  pinGuideCancel: {
+    paddingVertical: 14,
+    paddingHorizontal: 32,
+    borderRadius: 12,
+    backgroundColor: "white",
+    shadowColor: "#000",
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+
+  pinGuideCancelText: {
+    color: "#111",
+    fontWeight: "800",
+    fontSize: 16,
+  },
+
+  pinGuideNext: {
+    paddingVertical: 14,
+    paddingHorizontal: 32,
+    borderRadius: 12,
+    backgroundColor: "white",
+    shadowColor: "#000",
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+
+  pinGuideNextText: {
+    color: "#111",
+    fontWeight: "800",
+    fontSize: 16,
   },
 });

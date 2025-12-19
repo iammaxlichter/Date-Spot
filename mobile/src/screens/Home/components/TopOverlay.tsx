@@ -1,0 +1,83 @@
+// src/screens/components/TopOverlay.tsx
+import React from "react";
+import { View, Text, TouchableOpacity, TextInput, ScrollView, Keyboard } from "react-native";
+import type { Place } from "../../../lib/api/places";
+import type { GooglePrediction } from "../../../screens/Home/types";
+import { styles } from "../../../screens/styles";
+import { SuggestionsDropdown } from "./SuggestionsDropdown";
+
+export function TopOverlay(props: {
+  searchQuery: string;
+  onChangeSearch: (text: string) => void;
+  onSubmitSearch: () => void;
+
+  showSuggestions: boolean;
+
+  localMatches: Place[];
+  googleResults: GooglePrediction[];
+  searching: boolean;
+
+  onSelectSaved: (spot: Place) => void;
+  onSelectGoogle: (prediction: GooglePrediction) => void;
+
+  onLogout: () => void;
+  onAddSpot: () => void;
+}) {
+  const {
+    searchQuery,
+    onChangeSearch,
+    onSubmitSearch,
+    showSuggestions,
+    localMatches,
+    googleResults,
+    searching,
+    onSelectSaved,
+    onSelectGoogle,
+    onLogout,
+    onAddSpot,
+  } = props;
+
+  return (
+    <View style={styles.topOverlay}>
+      <View style={styles.searchBar}>
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Search places or date spots…"
+          value={searchQuery}
+          onChangeText={onChangeSearch}
+          onFocus={() => {
+            // parent decides showSuggestions; keep this for UX if you want
+          }}
+          onBlur={() => {
+            // parent decides showSuggestions; keep this for UX if you want
+          }}
+          returnKeyType="search"
+          onSubmitEditing={() => {
+            Keyboard.dismiss();
+            onSubmitSearch();
+          }}
+        />
+      </View>
+
+      <TouchableOpacity style={[styles.addPinButton, { marginTop: 8 }]} onPress={onLogout}>
+        <Text style={styles.addPinText}>Logout</Text>
+      </TouchableOpacity>
+
+      <SuggestionsDropdown
+        visible={
+          showSuggestions &&
+          (localMatches.length > 0 || googleResults.length > 0 || searching)
+        }
+        localMatches={localMatches}
+        googleResults={googleResults}
+        searching={searching}
+        onSelectSaved={onSelectSaved}
+        onSelectGoogle={onSelectGoogle}
+      />
+
+      <TouchableOpacity style={styles.addPinButton} onPress={onAddSpot}>
+        <Text style={styles.addPinText}>📍 Add Date Spot</Text>
+      </TouchableOpacity>
+    </View>
+  );
+}

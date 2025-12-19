@@ -15,9 +15,10 @@ export class PlacesService {
   }
 
   async createPlace(dto: CreatePlaceDto) {
-    if (dto.googlePlaceId) {
+    // If this place is coming from Google, de-dupe by googlePlaceId
+    if ((dto as any).googlePlaceId) {
       const existing = await this.client.place.findUnique({
-        where: { googlePlaceId: dto.googlePlaceId },
+        where: { googlePlaceId: (dto as any).googlePlaceId },
       });
       if (existing) return existing;
     }
@@ -27,8 +28,9 @@ export class PlacesService {
         name: dto.name,
         latitude: dto.latitude,
         longitude: dto.longitude,
-        address: dto.address,
-        googlePlaceId: dto.googlePlaceId,
+        // These are optional fields (only set if present in dto)
+        address: (dto as any).address,
+        googlePlaceId: (dto as any).googlePlaceId,
       },
     });
   }
@@ -51,12 +53,13 @@ export class PlacesService {
     const atmosphereAverage =
       totalRatings === 0
         ? null
-        : ratings.reduce((sum, r) => sum + r.atmosphereScore, 0) /
+        : ratings.reduce((sum: number, r: any) => sum + r.atmosphereScore, 0) /
           totalRatings;
     const dateAverage =
       totalRatings === 0
         ? null
-        : ratings.reduce((sum, r) => sum + r.dateScore, 0) / totalRatings;
+        : ratings.reduce((sum: number, r: any) => sum + r.dateScore, 0) /
+          totalRatings;
 
     return {
       ...rest,
@@ -66,73 +69,71 @@ export class PlacesService {
       ratings,
     };
   }
-async getNearbyPlaces(query: NearbyPlacesQueryDto | any) {
-  const latitude =
-    typeof query.latitude === "string"
-      ? parseFloat(query.latitude)
-      : query.latitude;
 
-  const longitude =
-    typeof query.longitude === "string"
-      ? parseFloat(query.longitude)
-      : query.longitude;
+  async getNearbyPlaces(query: NearbyPlacesQueryDto | any) {
+    const latitude =
+      typeof query.latitude === "string"
+        ? parseFloat(query.latitude)
+        : query.latitude;
 
-  const radiusKmRaw =
-    query.radiusKm !== undefined && query.radiusKm !== null
-      ? query.radiusKm
-      : 10;
+    const longitude =
+      typeof query.longitude === "string"
+        ? parseFloat(query.longitude)
+        : query.longitude;
 
-  const radiusKm =
-    typeof radiusKmRaw === "string"
-      ? parseFloat(radiusKmRaw)
-      : radiusKmRaw;
+    const radiusKmRaw =
+      query.radiusKm !== undefined && query.radiusKm !== null
+        ? query.radiusKm
+        : 10;
 
-  const delta = radiusKm / 111;
+    const radiusKm =
+      typeof radiusKmRaw === "string" ? parseFloat(radiusKmRaw) : radiusKmRaw;
 
-  const places = await this.client.place.findMany({
-    where: {
-      latitude: {
-        gte: latitude - delta,
-        lte: latitude + delta,
+    const delta = radiusKm / 111;
+
+    const places = await this.client.place.findMany({
+      where: {
+        latitude: {
+          gte: latitude - delta,
+          lte: latitude + delta,
+        },
+        longitude: {
+          gte: longitude - delta,
+          lte: longitude + delta,
+        },
       },
-      longitude: {
-        gte: longitude - delta,
-        lte: longitude + delta,
+      include: {
+        ratings: true,
       },
-    },
-    include: {
-      ratings: true,
-    },
-  });
+    });
 
-  return places.map((p: any) => {
-    const totalRatings = p.ratings.length;
-    const atmosphereAverage =
-      totalRatings === 0
-        ? null
-        : p.ratings.reduce(
-            (sum: number, r: any) => sum + r.atmosphereScore,
-            0,
-          ) / totalRatings;
-    const dateAverage =
-      totalRatings === 0
-        ? null
-        : p.ratings.reduce(
-            (sum: number, r: any) => sum + r.dateScore,
-            0,
-          ) / totalRatings;
+    return places.map((p: any) => {
+      const totalRatings = p.ratings.length;
+      const atmosphereAverage =
+        totalRatings === 0
+          ? null
+          : p.ratings.reduce(
+              (sum: number, r: any) => sum + r.atmosphereScore,
+              0,
+            ) / totalRatings;
+      const dateAverage =
+        totalRatings === 0
+          ? null
+          : p.ratings.reduce(
+              (sum: number, r: any) => sum + r.dateScore,
+              0,
+            ) / totalRatings;
 
-    const { ratings, ...rest } = p;
+      const { ratings, ...rest } = p;
 
-    return {
-      ...rest,
-      totalRatings,
-      atmosphereAverage,
-      dateAverage,
-    };
-  });
-}
-
+      return {
+        ...rest,
+        totalRatings,
+        atmosphereAverage,
+        dateAverage,
+      };
+    });
+  }
 
   async ratePlace(placeId: string, userId: string, dto: RatePlaceDto) {
     // ensure place exists
@@ -154,16 +155,22 @@ async getNearbyPlaces(query: NearbyPlacesQueryDto | any) {
       update: {
         atmosphereScore: dto.atmosphereScore,
         dateScore: dto.dateScore,
-        recommend: dto.recommend ?? true,
+        wouldReturn: dto.wouldReturn ?? true,
         notes: dto.notes,
+        vibe: dto.vibe,
+        price: dto.price,
+        bestFor: dto.bestFor,
       },
       create: {
         userId,
         placeId,
         atmosphereScore: dto.atmosphereScore,
         dateScore: dto.dateScore,
-        recommend: dto.recommend ?? true,
+        wouldReturn: dto.wouldReturn ?? true,
         notes: dto.notes,
+        vibe: dto.vibe,
+        price: dto.price,
+        bestFor: dto.bestFor,
       },
     });
 

@@ -1,21 +1,20 @@
 // src/lib/api/places.ts
 import axios from "axios";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const API_URL = "http://10.0.2.2:3000";
 
-const client = axios.create({
-  baseURL: API_URL,
-});
+const client = axios.create({ baseURL: API_URL });
 
-// TEMP until proper auth
-const AUTH_TOKEN =
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI5NTcxYzMwNS0wYjI3LTQ2ZjUtYjE1OC0yYTUyZTEwNDc5YTIiLCJlbWFpbCI6InRlc3QyQGV4YW1wbGUuY29tIiwiaWF0IjoxNzY1NDE1MTc2LCJleHAiOjE3NjYwMTk5NzZ9.kdw46OgDPmj5rlCT6nRp_CvE1let0Tbsv69drfQCrIc";
-
-client.interceptors.request.use((config) => {
-  config.headers = config.headers ?? {};
-  config.headers.Authorization = `Bearer ${AUTH_TOKEN}`;
+client.interceptors.request.use(async (config) => {
+  const token = await AsyncStorage.getItem("token");
+  if (token) {
+    config.headers = config.headers ?? {};
+    config.headers.Authorization = `Bearer ${token}`;
+  }
   return config;
 });
+
 
 export type Place = {
   id: string;
@@ -50,14 +49,19 @@ export async function createPlace(input: {
   return res.data;
 }
 
-export async function createSpotRating(placeId: string, input: {
-  atmosphereScore: number;
-  dateScore: number;
-  recommend: boolean;
-  notes?: string;
-}) {
+export async function createSpotRating(
+  placeId: string,
+  input: {
+    atmosphereScore: number;
+    dateScore: number;
+    wouldReturn: boolean;
+    notes?: string;
+    vibe?: "Chill" | "Romantic" | "Energetic" | "Intimate" | "Social";
+    price?: "$" | "$$" | "$$$" | "$$$$" | "$$$$$";
+    bestFor?: "Day" | "Night" | "Sunset" | "Any";
+  }
+) {
   const res = await client.post(`/places/${placeId}/ratings`, {
-    notes: "",
     ...input,
   });
   return res.data;

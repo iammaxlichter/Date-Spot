@@ -1,7 +1,14 @@
+// src/screens/RegisterScreen.tsx
 import { useState } from "react";
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from "react-native";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { register } from "../lib/api/auth";
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
+  Alert,
+} from "react-native";
+import { supabase } from "../lib/supabase";
 
 export default function RegisterScreen({ navigation }: any) {
   const [email, setEmail] = useState("");
@@ -10,7 +17,6 @@ export default function RegisterScreen({ navigation }: any) {
   const [loading, setLoading] = useState(false);
 
   const onRegister = async () => {
-    console.log("REGISTER PRESSED", { email, name });
     if (!email || !password) {
       Alert.alert("Missing info", "Email and password are required.");
       return;
@@ -18,12 +24,26 @@ export default function RegisterScreen({ navigation }: any) {
 
     try {
       setLoading(true);
-      const { access_token } = await register(email.trim(), name.trim(), password);
-      await AsyncStorage.setItem("token", access_token);
 
-      navigation.replace("Home");
+      const { data, error } = await supabase.auth.signUp({
+        email: email.trim(),
+        password,
+        options: {
+          data: {
+            name: name.trim() || null,
+          },
+        },
+      });
+
+      if (error) {
+        Alert.alert("Register failed", error.message);
+        return;
+      }
+
+      // ✅ If confirmations are OFF, session exists and RootNavigator will route to Home.
+      // ✅ Do NOT navigate manually to Home.
     } catch (e: any) {
-      Alert.alert("Register failed", e.message ?? "Try again.");
+      Alert.alert("Register failed", e?.message ?? "Try again.");
     } finally {
       setLoading(false);
     }
@@ -57,8 +77,14 @@ export default function RegisterScreen({ navigation }: any) {
         onChangeText={setPassword}
       />
 
-      <TouchableOpacity style={styles.button} onPress={onRegister} disabled={loading}>
-        <Text style={styles.buttonText}>{loading ? "Creating..." : "Register"}</Text>
+      <TouchableOpacity
+        style={[styles.button, loading && { opacity: 0.7 }]}
+        onPress={onRegister}
+        disabled={loading}
+      >
+        <Text style={styles.buttonText}>
+          {loading ? "Creating..." : "Register"}
+        </Text>
       </TouchableOpacity>
 
       <TouchableOpacity onPress={() => navigation.navigate("Login")}>

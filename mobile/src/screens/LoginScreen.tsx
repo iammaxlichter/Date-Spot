@@ -8,8 +8,7 @@ import {
   StyleSheet,
   Alert,
 } from "react-native";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { login } from "../lib/api/auth";
+import { supabase } from "../lib/supabase";
 
 export default function LoginScreen({ navigation }: any) {
   const [email, setEmail] = useState("");
@@ -24,12 +23,21 @@ export default function LoginScreen({ navigation }: any) {
 
     try {
       setLoading(true);
-      const { access_token } = await login(email.trim(), password);
-      await AsyncStorage.setItem("token", access_token);
 
-      navigation.replace("Home");
+      const { error } = await supabase.auth.signInWithPassword({
+        email: email.trim(),
+        password,
+      });
+
+      if (error) {
+        Alert.alert("Login failed", error.message);
+        return;
+      }
+
+      // ✅ Do NOT navigate here.
+      // RootNavigator's onAuthStateChange will show Home when session exists.
     } catch (e: any) {
-      Alert.alert("Login failed", e.message ?? "Try again.");
+      Alert.alert("Login failed", e?.message ?? "Try again.");
     } finally {
       setLoading(false);
     }

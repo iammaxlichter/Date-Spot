@@ -1,6 +1,7 @@
 // src/screens/components/TopOverlay.tsx
 import React from "react";
-import { View, Text, TouchableOpacity, TextInput, ScrollView, Keyboard } from "react-native";
+import { View, Text, TouchableOpacity, TextInput, Keyboard } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { Place } from "../../../lib/api/places";
 import type { GooglePrediction } from "../../../screens/Home/types";
 import { styles } from "../../../screens/styles";
@@ -10,19 +11,17 @@ export function TopOverlay(props: {
   searchQuery: string;
   onChangeSearch: (text: string) => void;
   onSubmitSearch: () => void;
-
   showSuggestions: boolean;
-
   localMatches: Place[];
   googleResults: GooglePrediction[];
   searching: boolean;
-
   onSelectSaved: (spot: Place) => void;
   onSelectGoogle: (prediction: GooglePrediction) => void;
-
   onLogout: () => void;
   onAddSpot: () => void;
 }) {
+  const insets = useSafeAreaInsets();
+
   const {
     searchQuery,
     onChangeSearch,
@@ -38,19 +37,13 @@ export function TopOverlay(props: {
   } = props;
 
   return (
-    <View style={styles.topOverlay}>
+    <View style={[styles.topOverlay, { top: 10 }]}>
       <View style={styles.searchBar}>
         <TextInput
           style={styles.searchInput}
           placeholder="Search places or date spots…"
           value={searchQuery}
           onChangeText={onChangeSearch}
-          onFocus={() => {
-            // parent decides showSuggestions; keep this for UX if you want
-          }}
-          onBlur={() => {
-            // parent decides showSuggestions; keep this for UX if you want
-          }}
           returnKeyType="search"
           onSubmitEditing={() => {
             Keyboard.dismiss();
@@ -59,7 +52,10 @@ export function TopOverlay(props: {
         />
       </View>
 
-      <TouchableOpacity style={[styles.addPinButton, { marginTop: 8 }]} onPress={onLogout}>
+      <TouchableOpacity
+        style={[styles.addPinButton, { marginTop: 8 }]}
+        onPress={onLogout}
+      >
         <Text style={styles.addPinText}>Logout</Text>
       </TouchableOpacity>
 
@@ -76,7 +72,7 @@ export function TopOverlay(props: {
       />
 
       <TouchableOpacity style={styles.addPinButton} onPress={onAddSpot}>
-        <Text style={styles.addPinText}>📍 Add Date Spot</Text>
+        <Text style={styles.addPinText}>Add Date Spot</Text>
       </TouchableOpacity>
     </View>
   );

@@ -21,7 +21,7 @@ export function useInitialRegionAndSpots() {
         const data = await getNearbyPlaces(
           initialRegion.latitude,
           initialRegion.longitude,
-          10,
+          10
         );
 
         console.log("Loaded spots:", data.length);

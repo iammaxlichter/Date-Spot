@@ -1,9 +1,7 @@
-// src/screens/HomeScreen.tsx (UPDATED)
+// src/screens/HomeScreen.tsx
 import React, { useRef } from "react";
 import { View, ActivityIndicator, Alert, Text, Keyboard } from "react-native";
 import MapView, { Region } from "react-native-maps";
-import { styles } from "../styles";
-import { clearToken } from "../../lib/api/session";
 import { NewSpotSheet } from "../NewSpotSheet";
 
 import { useInitialRegionAndSpots } from "./hooks/useInitialRegionAndSpots";
@@ -19,6 +17,8 @@ import { TopOverlay } from "./components/TopOverlay";
 import { PinPlacementOverlay } from "./components/PinPlacementOverlay";
 import { SpotsMap } from "./components/SpotsMap";
 import type { Place } from "../../lib/api/places";
+import { getNearbyPlaces } from "../../lib/api/places";
+import { supabase } from "../../lib/supabase";
 
 export default function HomeScreen({ navigation }: any) {
   const mapRef = useRef<MapView | null>(null);
@@ -40,8 +40,21 @@ export default function HomeScreen({ navigation }: any) {
     showSuggestions,
   });
 
+  const refreshSpots = async () => {
+    if (!region) return;
+    const data = await getNearbyPlaces(region.latitude, region.longitude, 10);
+    setSpots(data);
+  };
+
   const spotCreation = useSpotCreation({
-    onSaved: (place) => setSpots((prev) => [...prev, place]),
+    // ✅ After insert, re-fetch so markers/list are correct and filtered
+    onSaved: async () => {
+      try {
+        await refreshSpots();
+      } catch (err) {
+        console.error(err);
+      }
+    },
   });
 
   const handleSelectSavedSpot = (spot: Place) => {
@@ -122,9 +135,9 @@ export default function HomeScreen({ navigation }: any) {
           onSelectSaved={handleSelectSavedSpot}
           onSelectGoogle={handleSelectGooglePlace}
           onLogout={async () => {
-            await clearToken();
-            Alert.alert("Logged out", "Token cleared. Please log in again.");
-            navigation.replace("Login");
+            await supabase.auth.signOut();
+            // ✅ RootNavigator onAuthStateChange should send user to Login.
+            // (No manual navigation needed unless your root isn't wired yet.)
           }}
           onAddSpot={() => spotCreation.startNewSpot(region)}
         />

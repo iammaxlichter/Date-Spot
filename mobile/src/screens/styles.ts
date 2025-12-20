@@ -4,7 +4,6 @@ import { StyleSheet } from "react-native";
 export const styles = StyleSheet.create({
   topOverlay: {
     position: "absolute",
-    top: 10,
     left: 10,
     right: 10,
     zIndex: 10,
@@ -232,4 +231,18 @@ export const styles = StyleSheet.create({
     fontWeight: "800",
     fontSize: 16,
   },
+
+profileIconButton: {
+  width: 36,
+  height: 36,
+  borderRadius: 18,
+  overflow: "hidden",
+},
+
+profileIconImage: {
+  width: 36,
+  height: 36,
+},
+
+
 });

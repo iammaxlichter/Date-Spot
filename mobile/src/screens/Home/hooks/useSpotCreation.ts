@@ -2,7 +2,7 @@
 import { useMemo, useState } from "react";
 import type { Region } from "react-native-maps";
 import { Alert } from "react-native";
-import { createPlace, createSpotRating } from "../../../lib/api/places";
+import { supabase } from "../../../lib/supabase";
 import type { Coords, NewSpotDraft } from "../types";
 
 function makeEmptyDraft(coords: Coords | null): NewSpotDraft {
@@ -19,9 +19,14 @@ function makeEmptyDraft(coords: Coords | null): NewSpotDraft {
   };
 }
 
-export function useSpotCreation(params: {
-  onSaved: (place: any) => void;
-}) {
+async function requireUserId(): Promise<string> {
+  const { data, error } = await supabase.auth.getUser();
+  if (error) throw error;
+  if (!data.user) throw new Error("Not authenticated");
+  return data.user.id;
+}
+
+export function useSpotCreation(params: { onSaved: (place: any) => void }) {
   const { onSaved } = params;
 
   const [isPlacingPin, setIsPlacingPin] = useState(false);
@@ -32,7 +37,10 @@ export function useSpotCreation(params: {
   const newSpotCoords = useMemo(() => draft.coords, [draft.coords]);
 
   const startNewSpot = (region: Region) => {
-    const coords: Coords = { latitude: region.latitude, longitude: region.longitude };
+    const coords: Coords = {
+      latitude: region.latitude,
+      longitude: region.longitude,
+    };
     setDraft(makeEmptyDraft(coords));
     setIsPlacingPin(true);
     setShowNewSpotSheet(false);
@@ -53,10 +61,18 @@ export function useSpotCreation(params: {
     setDraft((prev) => ({ ...prev, coords }));
   };
 
-  const setField = <K extends keyof NewSpotDraft>(key: K, value: NewSpotDraft[K]) => {
+  const setField = <K extends keyof NewSpotDraft>(
+    key: K,
+    value: NewSpotDraft[K]
+  ) => {
     setDraft((prev) => ({ ...prev, [key]: value }));
   };
 
+  /**
+   * Single-call save:
+   * Inserts one row into Supabase "spots" with all fields.
+   * (No more createPlace() + createSpotRating() two-step flow.)
+   */
   const saveNewSpot = async () => {
     if (!draft.coords) return;
 
@@ -66,25 +82,38 @@ export function useSpotCreation(params: {
     }
 
     try {
-      console.log("Creating place…");
-      const place = await createPlace({
+      const userId = await requireUserId();
+
+      const payload = {
+        user_id: userId,
         name: draft.name.trim(),
         latitude: draft.coords.latitude,
         longitude: draft.coords.longitude,
-      });
 
-      console.log("Place created → creating rating…");
-      await createSpotRating(place.id, {
-        atmosphereScore: Number(draft.atmosphere),
-        dateScore: Number(draft.dateScore),
-        notes: draft.notes.trim() || undefined,
-        vibe: draft.vibe ?? undefined,
-        price: draft.price ?? undefined,
-        bestFor: draft.bestFor ?? undefined,
-        wouldReturn: draft.wouldReturn,
-      });
+        // your schema stores atmosphere as text, date_score as number
+        atmosphere: draft.atmosphere ? String(draft.atmosphere) : null,
+        date_score: Number(draft.dateScore),
+        notes: draft.notes.trim() || null,
+        vibe: draft.vibe ?? null,
+        price: draft.price ?? null,
+        best_for: draft.bestFor ?? null,
+        would_return: draft.wouldReturn,
+      };
 
-      onSaved(place);
+      console.log("Saving spot (single insert)…");
+
+      const { data, error } = await supabase
+        .from("spots")
+        .insert(payload)
+        .select(
+          "id,name,latitude,longitude,atmosphere,date_score,notes,vibe,price,best_for,would_return,created_at"
+        )
+        .single();
+
+      if (error) throw error;
+      if (!data) throw new Error("Failed to save spot");
+
+      onSaved(data);
 
       Alert.alert("Success!", "Your date spot has been saved.");
 

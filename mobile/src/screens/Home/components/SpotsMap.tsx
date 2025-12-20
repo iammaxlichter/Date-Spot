@@ -44,10 +44,8 @@ export function SpotsMap(props: {
           coordinate={{ latitude: spot.latitude, longitude: spot.longitude }}
           title={spot.name}
           description={
-            spot.totalRatings > 0
-              ? `Atmosphere: ${spot.atmosphereAverage?.toFixed(
-                  1,
-                )} · Date: ${spot.dateAverage?.toFixed(1)}`
+            spot.date_score || spot.atmosphere
+              ? `Atmosphere: ${spot.atmosphere ?? "—"} · Date: ${spot.date_score ?? "—"}`
               : "No ratings yet"
           }
         />

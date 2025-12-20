@@ -103,93 +103,89 @@ The long-term goal is to be **the place where relationships begin, grow, and are
 
 <br><br><br>
 
-### Tech Stack
+## Tech Stack
 
-This project uses a modern, industry-standard full stack architecture for cross-platform mobile development and backend services.
+This project uses a modern, production-ready architecture for cross-platform mobile development backed by a managed backend-as-a-service.
 
 ---
 
-#### Mobile App (Frontend)
+### Mobile App (Frontend)
 
-**Framework**  
-- React Native (Expo)  
-  Single TypeScript codebase that runs on both iOS and Android. Expo simplifies development, device testing, and cloud builds.
+**Framework**
+- **React Native (Expo)**  
+  A single TypeScript codebase that runs on both iOS and Android. Expo simplifies local development, device testing, and cloud-based builds.
 
-**Language**  
-- TypeScript  
-  Used throughout the project for type safety and maintainability.
+**Language**
+- **TypeScript**  
+  Used throughout the app for type safety, maintainability, and predictable data flow.
 
-**Networking and State**  
-- TanStack React Query  
-  Manages data fetching, caching, background refetching, and server synchronization.  
-- Zustand  
-  Used for lightweight global and UI state management.
+**Data Fetching and State**
+- **Supabase JavaScript Client**  
+  Handles authentication, database reads/writes, and session management directly from the mobile app.  
+- **TanStack React Query**  
+  Manages asynchronous data fetching, caching, background refetching, and server state synchronization.  
+- **Zustand**  
+  Lightweight state management for UI and ephemeral client-side state.
 
-**Navigation**  
-- React Navigation  
-  Handles screen transitions, stacks, tabs, and overall navigation structure.
+**Navigation**
+- **React Navigation**  
+  Manages screen stacks, transitions, and overall navigation flow.
 
-**Forms and Validation**  
-- React Hook Form  
-- Zod  
+**Forms and Validation**
+- **React Hook Form**  
+- **Zod**  
   Provides efficient form handling and schema-based validation.
 
-**Styling**  
-- NativeWind  
-  Utility-based styling for React Native following Tailwind CSS style conventions.
+**Styling**
+- **NativeWind**  
+  Utility-first styling for React Native using Tailwind CSS conventions.
 
 ---
 
-#### Backend API (Server)
+### Backend and Data Layer
 
-**Framework**  
-- NestJS  
-  A structured and scalable Node.js framework with built-in dependency injection and modular architecture.
+**Backend Platform**
+- **Supabase**  
+  A managed backend providing authentication, PostgreSQL database, row-level security, and RESTful access without maintaining a custom server.
 
-**Language**  
-- TypeScript  
-  Ensures type consistency across frontend, backend, and database layers.
+**Database**
+- **PostgreSQL (Supabase-managed)**  
+  Production-grade relational database with row-level security policies enforced at the database level.
 
-**Database**  
-- SQLite for local development (via Prisma)  
-  Simple file-based SQL database (`dev.db`) used during development. Can be swapped to PostgreSQL or another SQL engine in production.
+**Authentication**
+- **Supabase Auth (Email + Password)**  
+  Handles user registration, login, session persistence, and secure token management.  
+  Email confirmations are disabled to allow immediate signup and login.
 
-**ORM**  
-- Prisma  
-  Used for database access, schema modeling, and type-safe queries.
-
-**Authentication**  
-- JWT-based authentication (NestJS + `@nestjs/jwt` + `passport-jwt`)  
-  Handles user registration, login, token generation, and route protection.
+**Authorization**
+- **Row Level Security (RLS)**  
+  Ensures users can only access and modify their own data directly at the database layer.
 
 ---
 
-#### DevOps and Tooling
+### DevOps and Tooling
 
-**Source Control**  
-- Git and GitHub
+**Source Control**
+- **Git and GitHub**
 
-**Mobile Build System**  
-- Expo EAS Build  
-  Used to compile and distribute iOS and Android production builds, including the ability to create iOS builds without owning a physical Mac.
+**Mobile Build System**
+- **Expo EAS Build**  
+  Used to compile and distribute iOS and Android builds, including cloud-based iOS builds without requiring a local Mac.
 
-**Quality and Type Safety**  
-- TypeScript strict mode  
-- ESLint and Prettier for code consistency and formatting  
-- Jest for automated testing
+**Quality and Type Safety**
+- **TypeScript (strict mode)**  
+- **ESLint and Prettier** for code consistency and formatting  
+- **Jest** for automated testing
 
 ---
 
-#### Architecture Summary
+### Architecture Summary
 
-This project uses a single TypeScript codebase for both mobile platforms.  
-Expo is used for development and cloud-based builds.  
-React Native handles the UI and user interaction layer.  
-React Query and Zustand manage both server and local state.  
+The mobile app is built with React Native and Expo, sharing a single TypeScript codebase across platforms.  
+Supabase replaces a traditional backend API by providing authentication, PostgreSQL storage, and authorization directly to the client.  
+Row-level security policies enforce data isolation per user, eliminating the need for custom backend auth logic.  
 
-The backend is built with NestJS and Prisma.  
-Prisma provides schema management and database access into a SQL database (SQLite in dev, pluggable to PostgreSQL or others later).  
-Authentication is handled with JWTs, allowing the mobile app to securely talk to the API.  
-The system is designed for scalability, reliability, and maintainability.
+The architecture is designed to be scalable, secure, and maintainable while minimizing operational complexity.
+
 
 

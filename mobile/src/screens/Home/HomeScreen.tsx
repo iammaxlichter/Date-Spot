@@ -134,11 +134,6 @@ export default function HomeScreen({ navigation }: any) {
           searching={searching}
           onSelectSaved={handleSelectSavedSpot}
           onSelectGoogle={handleSelectGooglePlace}
-          onLogout={async () => {
-            await supabase.auth.signOut();
-            // ✅ RootNavigator onAuthStateChange should send user to Login.
-            // (No manual navigation needed unless your root isn't wired yet.)
-          }}
           onAddSpot={() => spotCreation.startNewSpot(region)}
         />
       )}

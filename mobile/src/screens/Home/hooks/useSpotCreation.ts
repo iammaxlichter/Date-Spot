@@ -9,8 +9,8 @@ function makeEmptyDraft(coords: Coords | null): NewSpotDraft {
   return {
     coords,
     name: "",
-    atmosphere: "8",
-    dateScore: "8",
+    atmosphere: "",
+    dateScore: "",
     notes: "",
     vibe: null,
     price: null,
@@ -92,7 +92,7 @@ export function useSpotCreation(params: { onSaved: (place: any) => void }) {
 
         // your schema stores atmosphere as text, date_score as number
         atmosphere: draft.atmosphere ? String(draft.atmosphere) : null,
-        date_score: Number(draft.dateScore),
+        date_score: draft.dateScore ? Number(draft.dateScore) : null,
         notes: draft.notes.trim() || null,
         vibe: draft.vibe ?? null,
         price: draft.price ?? null,

@@ -19,9 +19,9 @@ export type Place = {
   atmosphere?: string | null;
   date_score?: number | null;
   notes?: string | null;
-  vibe?: "Chill" | "Romantic" | "Energetic" | "Intimate" | "Social" | null;
-  price?: "$" | "$$" | "$$$" | "$$$$" | "$$$$$" | null;
-  best_for?: "Day" | "Night" | "Sunset" | "Any" | null;
+  vibe?: string | null;
+  price?: "$1-10" | "$10-20" | "$20-30" | "$30-50" | "$50-100" | "$100+" | null; 
+  best_for?: "Day" | "Night" | "Sunrise" | "Sunset" | "Any" | null; 
   would_return?: boolean | null;
 };
 
@@ -91,9 +91,9 @@ export async function getNearbyPlaces(lat: number, lng: number, radiusKm = 10) {
       atmosphere: s.atmosphere ?? null,
       date_score: s.date_score ?? null,
       notes: s.notes ?? null,
-      vibe: (s.vibe as any) ?? null,
-      price: (s.price as any) ?? null,
-      best_for: (s.best_for as any) ?? null,
+      vibe: s.vibe ?? null,
+      price: s.price ?? null,
+      best_for: s.best_for ?? null,
       would_return: s.would_return ?? null,
     })
   );
@@ -140,9 +140,9 @@ export async function createPlace(input: {
     atmosphere: data.atmosphere ?? null,
     date_score: data.date_score ?? null,
     notes: data.notes ?? null,
-    vibe: (data.vibe as any) ?? null,
-    price: (data.price as any) ?? null,
-    best_for: (data.best_for as any) ?? null,
+    vibe: data.vibe ?? null,
+    price: data.price ?? null,
+    best_for: data.best_for ?? null,
     would_return: data.would_return ?? null,
   };
 
@@ -157,13 +157,13 @@ export async function createPlace(input: {
 export async function createSpotRating(
   placeId: string,
   input: {
-    atmosphereScore: number; // you used numeric here before; we'll store as text for now
+    atmosphereScore: number; 
     dateScore: number;
     wouldReturn: boolean;
     notes?: string;
-    vibe?: "Chill" | "Romantic" | "Energetic" | "Intimate" | "Social";
-    price?: "$" | "$$" | "$$$" | "$$$$" | "$$$$$";
-    bestFor?: "Day" | "Night" | "Sunset" | "Any";
+    vibe?: string; 
+    price?: "$1-10" | "$10-20" | "$20-30" | "$30-50" | "$50-100" | "$100+";
+    bestFor?: "Day" | "Night" | "Sunrise" | "Sunset" | "Any";
   }
 ) {
   // Ensure logged in (and RLS will enforce ownership)

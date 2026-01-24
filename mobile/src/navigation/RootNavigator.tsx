@@ -1,7 +1,7 @@
 // src/navigation/RootNavigator.tsx
 import "react-native-gesture-handler";
-import React, { useEffect, useState } from "react";
-import { NavigationContainer } from "@react-navigation/native";
+import React, { useEffect, useState, useCallback } from "react";
+import { NavigationContainer, useFocusEffect } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import {
   ActivityIndicator,
@@ -29,6 +29,38 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
 
 function HomeHeader({ onProfile }: { onProfile: () => void }) {
   const insets = useSafeAreaInsets();
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+
+  const loadAvatar = useCallback(async () => {
+    try {
+      const { data: userRes, error: userErr } = await supabase.auth.getUser();
+      if (userErr) throw userErr;
+      const user = userRes.user;
+      if (!user) return;
+
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("avatar_url")
+        .eq("id", user.id)
+        .maybeSingle();
+
+      if (error) throw error;
+
+      // optional cache-bust if you use the same storage path (avatar.jpg)
+      const url = data?.avatar_url ?? null;
+      setAvatarUrl(url ? `${url}${url.includes("?") ? "&" : "?"}t=${Date.now()}` : null);
+    } catch (e) {
+      console.warn("Failed to load avatar", e);
+      setAvatarUrl(null);
+    }
+  }, []);
+
+  // Refresh whenever Home becomes active again (e.g. after changing avatar in Profile)
+  useFocusEffect(
+    useCallback(() => {
+      loadAvatar();
+    }, [loadAvatar])
+  );
 
   return (
     <View style={{ paddingTop: insets.top, backgroundColor: "#fff" }}>
@@ -45,7 +77,11 @@ function HomeHeader({ onProfile }: { onProfile: () => void }) {
 
         <TouchableOpacity onPress={onProfile}>
           <Image
-            source={{ uri: "https://i.pravatar.cc/100?img=12" }}
+            source={
+              avatarUrl
+                ? { uri: avatarUrl }
+                : require("../../assets/default-avatar.png")
+            }
             style={{ width: 32, height: 32, borderRadius: 16 }}
           />
         </TouchableOpacity>
@@ -59,18 +95,14 @@ export function RootNavigator() {
   const [booting, setBooting] = useState(true);
 
   useEffect(() => {
-    // load session on startup
     supabase.auth.getSession().then(({ data }) => {
       setSession(data.session);
       setBooting(false);
     });
 
-    // react to login/logout
-    const { data: listener } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
-        setSession(session);
-      }
-    );
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+    });
 
     return () => {
       listener.subscription.unsubscribe();
@@ -107,6 +139,16 @@ export function RootNavigator() {
                   title: "Profile",
                   headerShadowVisible: false,
                   headerBackTitle: "",
+                  headerRight: () => (
+                    <TouchableOpacity
+                      onPress={async () => {
+                        await supabase.auth.signOut();
+                      }}
+                      style={{ marginRight: 12 }}
+                    >
+                      <Text style={{ color: "red", fontWeight: "600" }}>Logout</Text>
+                    </TouchableOpacity>
+                  ),
                 }}
               />
             </>

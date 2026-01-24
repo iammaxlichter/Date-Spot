@@ -1,7 +1,6 @@
 // src/screens/components/TopOverlay.tsx
 import React from "react";
 import { View, Text, TouchableOpacity, TextInput, Keyboard } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { Place } from "../../../lib/api/places";
 import type { GooglePrediction } from "../../../screens/Home/types";
 import { styles } from "../../../screens/styles";
@@ -17,11 +16,8 @@ export function TopOverlay(props: {
   searching: boolean;
   onSelectSaved: (spot: Place) => void;
   onSelectGoogle: (prediction: GooglePrediction) => void;
-  onLogout: () => void;
   onAddSpot: () => void;
 }) {
-  const insets = useSafeAreaInsets();
-
   const {
     searchQuery,
     onChangeSearch,
@@ -32,7 +28,6 @@ export function TopOverlay(props: {
     searching,
     onSelectSaved,
     onSelectGoogle,
-    onLogout,
     onAddSpot,
   } = props;
 
@@ -51,13 +46,6 @@ export function TopOverlay(props: {
           }}
         />
       </View>
-
-      <TouchableOpacity
-        style={[styles.addPinButton, { marginTop: 8 }]}
-        onPress={onLogout}
-      >
-        <Text style={styles.addPinText}>Logout</Text>
-      </TouchableOpacity>
 
       <SuggestionsDropdown
         visible={

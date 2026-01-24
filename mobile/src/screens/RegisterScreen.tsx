@@ -15,6 +15,7 @@ export default function RegisterScreen({ navigation }: any) {
   const [name, setName] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [username, setUsername] = useState("");
 
   const onRegister = async () => {
     if (!email || !password) {
@@ -22,15 +23,26 @@ export default function RegisterScreen({ navigation }: any) {
       return;
     }
 
+    const cleanedUsername = username.trim().toLowerCase();
+
+    if (!/^[a-z0-9_]{3,20}$/.test(cleanedUsername)) {
+      Alert.alert(
+        "Invalid username",
+        "Use 3-20 characters: letters, numbers, underscore."
+      );
+      return;
+    }
+
     try {
       setLoading(true);
 
-      const { data, error } = await supabase.auth.signUp({
+      const { error } = await supabase.auth.signUp({
         email: email.trim(),
         password,
         options: {
           data: {
             name: name.trim() || null,
+            username: cleanedUsername,
           },
         },
       });
@@ -40,8 +52,9 @@ export default function RegisterScreen({ navigation }: any) {
         return;
       }
 
-      // ✅ If confirmations are OFF, session exists and RootNavigator will route to Home.
-      // ✅ Do NOT navigate manually to Home.
+      // Profile created automatically by trigger!
+      Alert.alert("Success", "Account created! Check your email to verify.");
+
     } catch (e: any) {
       Alert.alert("Register failed", e?.message ?? "Try again.");
     } finally {
@@ -67,6 +80,14 @@ export default function RegisterScreen({ navigation }: any) {
         placeholder="Name (optional)"
         value={name}
         onChangeText={setName}
+      />
+
+      <TextInput
+        style={styles.input}
+        placeholder="Username (required)"
+        autoCapitalize="none"
+        value={username}
+        onChangeText={(t) => setUsername(t.replace(/[^a-zA-Z0-9_]/g, ""))}
       />
 
       <TextInput

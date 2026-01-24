@@ -1,20 +1,18 @@
-// src/screens/ProfileScreen.tsx
+// src/screens/UserProfileScreen.tsx
 import React from "react";
 import {
   View,
   Text,
   Image,
   StyleSheet,
-  Pressable,
   ActivityIndicator,
   Alert,
   ImageSourcePropType,
   ScrollView,
   RefreshControl,
+  Pressable,
 } from "react-native";
-import * as ImagePicker from "expo-image-picker";
 import { supabase } from "../lib/supabase";
-import { uploadProfilePicture } from "../lib/supabase/uploadProfilePicture";
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
 
 type ProfileRow = {
@@ -48,68 +46,67 @@ async function fetchCounts(userId: string) {
   };
 }
 
-export default function ProfileScreen() {
+export default function UserProfileScreen({ route }: any) {
+  const userId: string = route.params.userId;
   const navigation = useNavigation<any>();
 
   const [loading, setLoading] = React.useState(true);
   const [refreshing, setRefreshing] = React.useState(false);
-  const [uploading, setUploading] = React.useState(false);
   const [profile, setProfile] = React.useState<ProfileRow | null>(null);
+  const [isFollowing, setIsFollowing] = React.useState(false);
+  const [currentUserId, setCurrentUserId] = React.useState<string | null>(null);
+  const [followUpdating, setFollowUpdating] = React.useState(false);
+
+  const latest = React.useRef<{ isFollowing: boolean; profile: ProfileRow | null }>({
+    isFollowing: false,
+    profile: null,
+  });
+
+  React.useEffect(() => {
+    latest.current.isFollowing = isFollowing;
+  }, [isFollowing]);
+
+  React.useEffect(() => {
+    latest.current.profile = profile;
+  }, [profile]);
 
   const loadProfile = React.useCallback(async (): Promise<void> => {
     const { data: userRes, error: userErr } = await supabase.auth.getUser();
     if (userErr) throw userErr;
-    const user = userRes.user;
-    if (!user) throw new Error("Not authenticated");
+    const currentUser = userRes.user;
+    if (!currentUser) throw new Error("Not authenticated");
+
+    setCurrentUserId(currentUser.id);
 
     const { data, error } = await supabase
       .from("profiles")
       .select("id,name,username,avatar_url,followers_count,following_count")
-      .eq("id", user.id)
-      .maybeSingle();
+      .eq("id", userId)
+      .single();
 
     if (error) throw error;
 
-    let row: ProfileRow;
+    const counts = await fetchCounts(userId);
 
-    if (!data) {
-      const { data: created, error: createErr } = await supabase
-        .from("profiles")
-        .insert({
-          id: user.id,
-          name: user.user_metadata?.name ?? "Your Name",
-          username: user.user_metadata?.username ?? null,
-          avatar_url: null,
-          followers_count: 0,
-          following_count: 0,
-        })
-        .select("id,name,username,avatar_url,followers_count,following_count")
-        .single();
-
-      if (createErr) throw createErr;
-      row = created as ProfileRow;
-    } else {
-      row = data as ProfileRow;
-    }
-
-    // Always compute counts from follows table (source of truth)
-    const counts = await fetchCounts(user.id);
-
-    const merged: ProfileRow = {
-      ...row,
+    setProfile({
+      ...(data as ProfileRow),
       followers_count: counts.followers_count,
       following_count: counts.following_count,
-    };
-    setProfile(merged);
+    });
 
-    // Optional: keep profile counters in sync in DB (don't block UI)
-    void supabase
-      .from("profiles")
-      .update(counts)
-      .eq("id", user.id);
-  }, []);
+    const { data: followData, error: followErr } = await supabase
+      .from("follows")
+      .select("follower_id")
+      .eq("follower_id", currentUser.id)
+      .eq("following_id", userId)
+      .maybeSingle();
 
-  // Initial load
+    if (followErr) throw followErr;
+    setIsFollowing(!!followData);
+
+    void supabase.from("profiles").update(counts).eq("id", userId);
+  }, [userId]);
+
   React.useEffect(() => {
     (async () => {
       try {
@@ -124,11 +121,8 @@ export default function ProfileScreen() {
     })();
   }, [loadProfile]);
 
-  // Refresh whenever screen comes into focus
   useFocusEffect(
     React.useCallback(() => {
-      // NOTE: some setups type this as PromiseLike<void> (no .catch),
-      // so use an async IIFE instead.
       void (async () => {
         try {
           await loadProfile();
@@ -150,61 +144,69 @@ export default function ProfileScreen() {
     }
   }, [loadProfile]);
 
-  const pickAndUploadAvatar = async () => {
+  const toggleFollow = async () => {
+    if (!currentUserId || !latest.current.profile) return;
+    if (followUpdating) return;
+
+    setFollowUpdating(true);
+
+    const prevIsFollowing = latest.current.isFollowing;
+    const nextIsFollowing = !prevIsFollowing;
+    const prevProfile = latest.current.profile;
+
+    // Optimistic UI (followers_count only on viewed profile)
+    setIsFollowing(nextIsFollowing);
+    setProfile({
+      ...prevProfile,
+      followers_count: Math.max(
+        0,
+        (prevProfile.followers_count ?? 0) + (nextIsFollowing ? 1 : -1)
+      ),
+    });
+
     try {
-      setUploading(true);
+      if (nextIsFollowing) {
+        const { error } = await supabase.from("follows").insert({
+          follower_id: currentUserId,
+          following_id: userId,
+        });
 
-      const { data: userRes, error: userErr } = await supabase.auth.getUser();
-      if (userErr) throw userErr;
-      const user = userRes.user;
-      if (!user) throw new Error("Not authenticated");
+        // If already followed (unique constraint), treat as success
+        if (error && (error as any).code !== "23505") throw error;
+      } else {
+        const { error } = await supabase
+          .from("follows")
+          .delete()
+          .eq("follower_id", currentUserId)
+          .eq("following_id", userId);
 
-      const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (!perm.granted) {
-        Alert.alert("Permission needed", "Please allow photo library access.");
-        return;
+        if (error) throw error;
       }
 
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        quality: 0.9,
-        allowsEditing: true,
-        aspect: [1, 1],
-      });
+      // Re-fetch truth to prevent drift/double-decrement bugs
+      const counts = await fetchCounts(userId);
 
-      if (result.canceled) return;
+      setProfile((p) =>
+        p
+          ? {
+              ...p,
+              followers_count: counts.followers_count,
+              following_count: counts.following_count,
+            }
+          : p
+      );
 
-      const asset = result.assets[0];
-
-      const { publicUrl } = await uploadProfilePicture({
-        userId: user.id,
-        uri: asset.uri,
-        mimeType: asset.mimeType ?? undefined,
-      });
-
-      const { data: updated, error: updateErr } = await supabase
-        .from("profiles")
-        .update({ avatar_url: publicUrl })
-        .eq("id", user.id)
-        .select("id,name,username,avatar_url,followers_count,following_count")
-        .single();
-
-      if (updateErr) throw updateErr;
-
-      const counts = await fetchCounts(user.id);
-
-      setProfile({
-        ...(updated as ProfileRow),
-        followers_count: counts.followers_count,
-        following_count: counts.following_count,
-      });
-
-      void supabase.from("profiles").update(counts).eq("id", user.id);
+      void supabase.from("profiles").update(counts).eq("id", userId);
     } catch (e: any) {
       console.error(e);
-      Alert.alert("Upload failed", e?.message ?? "Could not update avatar.");
+
+      // rollback
+      setIsFollowing(prevIsFollowing);
+      setProfile(prevProfile);
+
+      Alert.alert("Error", e?.message ?? "Failed to update follow status.");
     } finally {
-      setUploading(false);
+      setFollowUpdating(false);
     }
   };
 
@@ -223,24 +225,27 @@ export default function ProfileScreen() {
   return (
     <ScrollView
       contentContainerStyle={s.container}
-      refreshControl={
-        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-      }
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
     >
-      <Pressable onPress={pickAndUploadAvatar} disabled={uploading}>
-        <Image source={avatarSource} style={s.avatar} />
-        {uploading && (
-          <View style={s.avatarOverlay}>
-            <ActivityIndicator />
-          </View>
-        )}
-      </Pressable>
-
-      <Text style={s.hint}>Tap your picture to change it</Text>
+      <Image source={avatarSource} style={s.avatar} />
 
       {profile.username ? <Text style={s.username}>@{profile.username}</Text> : null}
 
-      <Text style={s.name}>{profile.name ?? "Your Name"}</Text>
+      <Text style={s.name}>{profile.name ?? "Unknown User"}</Text>
+
+      <Pressable
+        style={[
+          s.followButton,
+          isFollowing && s.followingButton,
+          followUpdating && { opacity: 0.6 },
+        ]}
+        onPress={toggleFollow}
+        disabled={followUpdating}
+      >
+        <Text style={[s.followButtonText, isFollowing && s.followingButtonText]}>
+          {followUpdating ? "Updating..." : isFollowing ? "Following" : "Follow"}
+        </Text>
+      </Pressable>
 
       <View style={s.statsRow}>
         <Pressable
@@ -273,18 +278,28 @@ const s = StyleSheet.create({
     paddingBottom: 120,
   },
   avatar: { width: 120, height: 120, borderRadius: 60, marginBottom: 14 },
-  avatarOverlay: {
-    position: "absolute",
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "rgba(255,255,255,0.6)",
-    top: 0,
-    left: 0,
+  name: { fontSize: 22, fontWeight: "700", marginBottom: 12 },
+  username: { fontSize: 14, color: "#666", marginBottom: 10 },
+  followButton: {
+    backgroundColor: "#111",
+    paddingHorizontal: 32,
+    paddingVertical: 10,
+    borderRadius: 8,
+    marginBottom: 24,
   },
-  name: { fontSize: 22, fontWeight: "700", marginBottom: 18 },
+  followingButton: {
+    backgroundColor: "#fff",
+    borderWidth: 1,
+    borderColor: "#ddd",
+  },
+  followButtonText: {
+    color: "#fff",
+    fontWeight: "700",
+    fontSize: 15,
+  },
+  followingButtonText: {
+    color: "#111",
+  },
   statsRow: { flexDirection: "row", gap: 22 },
   statBox: {
     alignItems: "center",
@@ -297,6 +312,4 @@ const s = StyleSheet.create({
   },
   statNumber: { fontSize: 20, fontWeight: "700" },
   statLabel: { marginTop: 4, fontSize: 13, color: "#666" },
-  hint: { marginBottom: 30, fontSize: 11, color: "#666" },
-  username: { fontSize: 14, color: "#666", marginBottom: 10 },
 });

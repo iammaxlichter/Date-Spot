@@ -17,15 +17,29 @@ import LoginScreen from "../screens/LoginScreen";
 import HomeScreen from "../screens/Home/HomeScreen";
 import ProfileScreen from "../screens/ProfileScreen";
 import { supabase } from "../lib/supabase";
+import {
+  createNavigationContainerRef,
+} from "@react-navigation/native";
+import { BottomOverlay } from "./BottomOverlay";
+import SearchScreen from "../screens/Search/SearchScreen";
+import FollowersListScreen from "../screens/FollowersListScreen";
+import FollowingListScreen from "../screens/FollowingListScreen";
+import UserProfileScreen from "../screens/UserProfileScreen";
 
 export type RootStackParamList = {
   Register: undefined;
   Login: undefined;
   Home: undefined;
   Profile: undefined;
+  Search: undefined;
+  Followers: { userId: string };
+  Following: { userId: string };
+  UserProfile: { userId: string };
 };
 
+
 const Stack = createNativeStackNavigator<RootStackParamList>();
+export const navigationRef = createNavigationContainerRef<RootStackParamList>();
 
 function HomeHeader({ onProfile }: { onProfile: () => void }) {
   const insets = useSafeAreaInsets();
@@ -62,6 +76,7 @@ function HomeHeader({ onProfile }: { onProfile: () => void }) {
     }, [loadAvatar])
   );
 
+
   return (
     <View style={{ paddingTop: insets.top, backgroundColor: "#fff" }}>
       <View
@@ -93,6 +108,7 @@ function HomeHeader({ onProfile }: { onProfile: () => void }) {
 export function RootNavigator() {
   const [session, setSession] = useState<any>(null);
   const [booting, setBooting] = useState(true);
+  const [activeRoute, setActiveRoute] = useState<string>("Home");
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -119,54 +135,100 @@ export function RootNavigator() {
 
   return (
     <SafeAreaProvider>
-      <NavigationContainer>
-        <Stack.Navigator>
+      <NavigationContainer
+        ref={navigationRef}
+        onStateChange={() => {
+          const route = navigationRef.getCurrentRoute();
+          if (route?.name) setActiveRoute(route.name);
+        }}
+      >
+        <View style={{ flex: 1 }}>
+          <Stack.Navigator>
+            {session ? (
+              <>
+                <Stack.Screen
+                  name="Home"
+                  component={HomeScreen}
+                  options={({ navigation }) => ({
+                    header: () => (
+                      <HomeHeader onProfile={() => navigation.navigate("Profile")} />
+                    ),
+                  })}
+                />
+                <Stack.Screen
+                  name="Profile"
+                  component={ProfileScreen}
+                  options={{
+                    title: "Profile",
+                    headerShadowVisible: false,
+                    headerBackTitle: "",
+                    headerRight: () => (
+                      <TouchableOpacity
+                        onPress={async () => {
+                          await supabase.auth.signOut();
+                        }}
+                        style={{ marginRight: 12 }}
+                      >
+                        <Text style={{ color: "red", fontWeight: "600" }}>Logout</Text>
+                      </TouchableOpacity>
+                    ),
+                  }}
+                />
+                <Stack.Screen
+                  name="UserProfile"
+                  component={UserProfileScreen}
+                  options={{ title: "Profile" }}
+                />
+                <Stack.Screen
+                  name="Search"
+                  component={SearchScreen}
+                  options={{
+                    title: "Search",
+                    headerShadowVisible: false,
+                  }}
+                />
+                <Stack.Screen
+                  name="Followers"
+                  component={FollowersListScreen}
+                  options={{ title: "Followers" }}
+                />
+                <Stack.Screen
+                  name="Following"
+                  component={FollowingListScreen}
+                  options={{ title: "Following" }}
+                />
+              </>
+            ) : (
+              <>
+                <Stack.Screen
+                  name="Login"
+                  component={LoginScreen}
+                  options={{ title: "Login" }}
+                />
+                <Stack.Screen
+                  name="Register"
+                  component={RegisterScreen}
+                  options={{ title: "Create Account" }}
+                />
+              </>
+            )}
+          </Stack.Navigator>
           {session ? (
-            <>
-              <Stack.Screen
-                name="Home"
-                component={HomeScreen}
-                options={({ navigation }) => ({
-                  header: () => (
-                    <HomeHeader onProfile={() => navigation.navigate("Profile")} />
-                  ),
-                })}
-              />
-              <Stack.Screen
-                name="Profile"
-                component={ProfileScreen}
-                options={{
-                  title: "Profile",
-                  headerShadowVisible: false,
-                  headerBackTitle: "",
-                  headerRight: () => (
-                    <TouchableOpacity
-                      onPress={async () => {
-                        await supabase.auth.signOut();
-                      }}
-                      style={{ marginRight: 12 }}
-                    >
-                      <Text style={{ color: "red", fontWeight: "600" }}>Logout</Text>
-                    </TouchableOpacity>
-                  ),
-                }}
-              />
-            </>
-          ) : (
-            <>
-              <Stack.Screen
-                name="Login"
-                component={LoginScreen}
-                options={{ title: "Login" }}
-              />
-              <Stack.Screen
-                name="Register"
-                component={RegisterScreen}
-                options={{ title: "Create Account" }}
-              />
-            </>
-          )}
-        </Stack.Navigator>
+            <BottomOverlay
+              activeRoute={activeRoute}
+              onGoHome={() => {
+                if (navigationRef.isReady()) navigationRef.navigate("Home");
+              }}
+              onSearch={() => {
+                if (navigationRef.isReady()) navigationRef.navigate("Search");
+              }}
+              onGoProfile={() => {
+                if (navigationRef.isReady()) navigationRef.navigate("Profile");
+              }}
+            />
+          ) : null}
+        </View>
+
       </NavigationContainer>
     </SafeAreaProvider>
   );

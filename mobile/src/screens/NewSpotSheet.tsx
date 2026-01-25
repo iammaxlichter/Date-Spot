@@ -11,6 +11,7 @@ import {
 import { styles } from "./styles";
 import { sanitizeOneToTenInput } from "../lib/utils/numberInputValidation";
 import type { Price, BestFor, VibePreset } from "../lib/types/datespot";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 type Props = {
   name: string;
@@ -98,8 +99,9 @@ export function NewSpotSheet({
     "Social",
     "Aesthetic",
   ];
-  const prices: Price[] = ["$1-10", "$10-20", "$20-30", "$30-50", "$50-100", "$100+"];
+  const prices: Price[] = ["$1-10", "$10-20", "$20-30", "$30-50", "$50-100", "$100+", "No $"];
   const bestFors: BestFor[] = ["Day", "Night", "Sunrise", "Sunset", "Any"];
+  const insets = useSafeAreaInsets();
 
   const isPresetVibe = (v: string | null) =>
     !!v && vibePresets.includes(v as VibePreset);
@@ -115,7 +117,7 @@ export function NewSpotSheet({
 
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-      <View style={styles.bottomSheet}>
+      <View style={[styles.bottomSheet, { paddingTop: insets.top + 12 }]}>
         <Text style={styles.sheetTitle}>New Date Spot</Text>
 
         <Text style={styles.label}>Name</Text>
@@ -153,6 +155,17 @@ export function NewSpotSheet({
             />
           </View>
         </View>
+
+        <Text style={styles.label}>Notes</Text>
+        <TextInput
+          style={[styles.input, { height: 90, textAlignVertical: "top" }]}
+          placeholder="Anything to remember…"
+          value={notes}
+          onChangeText={onChangeNotes}
+          multiline
+          returnKeyType="done"
+          onSubmitEditing={Keyboard.dismiss}
+        />
 
         <Text style={styles.label}>Vibe</Text>
         <View style={{ flexDirection: "row", flexWrap: "wrap" }}>
@@ -241,17 +254,6 @@ export function NewSpotSheet({
             onPress={() => onChangeWouldReturn(false)}
           />
         </View>
-
-        <Text style={styles.label}>Notes</Text>
-        <TextInput
-          style={[styles.input, { height: 90, textAlignVertical: "top" }]}
-          placeholder="Anything to remember…"
-          value={notes}
-          onChangeText={onChangeNotes}
-          multiline
-          returnKeyType="done"
-          onSubmitEditing={Keyboard.dismiss}
-        />
 
         <View style={styles.actionsRow}>
           <TouchableOpacity

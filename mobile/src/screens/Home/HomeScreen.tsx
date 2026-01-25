@@ -8,7 +8,7 @@ import { useInitialRegionAndSpots } from "./hooks/useInitialRegionAndSpots";
 import { useSpotSearch } from "./hooks/useSpotSearch";
 import { usePlacesAutocomplete } from "./hooks/usePlacesAutocomplete";
 import { useSpotCreation } from "./hooks/useSpotCreation";
-import { useSpotCreation as useSpotCreationContext } from "../../contexts/SportCreationContext"; // ✅ Import the context
+import { useSpotCreation as useSpotCreationContext } from "../../contexts/SpotCreationContext"; // ✅ Import the context
 
 import { fetchPlaceDetails } from "../../lib/google/places";
 import { ZOOM_TO_GOOGLE_PLACE, ZOOM_TO_SAVED_SPOT } from "./constants";
@@ -19,7 +19,6 @@ import { PinPlacementOverlay } from "./components/PinPlacementOverlay";
 import { SpotsMap } from "./components/SpotsMap";
 import type { Place } from "../../lib/api/places";
 import { getNearbyPlaces } from "../../lib/api/places";
-import { supabase } from "../../lib/supabase";
 
 export default function HomeScreen({ navigation }: any) {
   const mapRef = useRef<MapView | null>(null);

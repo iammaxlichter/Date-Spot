@@ -20,7 +20,7 @@ export type Place = {
   date_score?: number | null;
   notes?: string | null;
   vibe?: string | null;
-  price?: "$1-10" | "$10-20" | "$20-30" | "$30-50" | "$50-100" | "$100+" | null; 
+  price?: "$1-10" | "$10-20" | "$20-30" | "$30-50" | "$50-100" | "$100+" | "No $" | null; 
   best_for?: "Day" | "Night" | "Sunrise" | "Sunset" | "Any" | null; 
   would_return?: boolean | null;
 };
@@ -162,7 +162,7 @@ export async function createSpotRating(
     wouldReturn: boolean;
     notes?: string;
     vibe?: string; 
-    price?: "$1-10" | "$10-20" | "$20-30" | "$30-50" | "$50-100" | "$100+";
+    price?: "$1-10" | "$10-20" | "$20-30" | "$30-50" | "$50-100" | "$100+" | "No $";
     bestFor?: "Day" | "Night" | "Sunrise" | "Sunset" | "Any";
   }
 ) {

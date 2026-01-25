@@ -76,20 +76,17 @@ export const styles = StyleSheet.create({
   },
 
   bottomSheet: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: "white",
-    padding: 16,
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
-    shadowColor: "#000",
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    zIndex: 1000,
-    elevation: 20,
-  },
+  position: "absolute",
+  top: 0,
+  left: 0,
+  right: 0,
+  bottom: 0,
+  backgroundColor: "white",
+  padding: 16,
+  zIndex: 1000,
+  elevation: 20,
+},
+
   sheetTitle: {
     fontSize: 16,
     fontWeight: "600",
@@ -141,7 +138,7 @@ export const styles = StyleSheet.create({
 
   pinGuideOverlay: {
   position: "absolute",
-  top: 0,
+  top: 50,
   left: 0,
   right: 0,
   bottom: 0,

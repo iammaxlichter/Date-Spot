@@ -25,7 +25,7 @@ import SearchScreen from "../screens/Search/SearchScreen";
 import FollowersListScreen from "../screens/FollowersListScreen";
 import FollowingListScreen from "../screens/FollowingListScreen";
 import UserProfileScreen from "../screens/UserProfileScreen";
-import { SpotCreationProvider, useSpotCreation } from "../contexts/SportCreationContext";
+import { SpotCreationProvider, useSpotCreation } from "../contexts/SpotCreationContext";
 
 export type RootStackParamList = {
   Register: undefined;
@@ -106,12 +106,11 @@ function HomeHeader({ onProfile }: { onProfile: () => void }) {
   );
 }
 
-// ✅ Inner component that uses the context
 function NavigatorContent() {
   const [session, setSession] = useState<any>(null);
   const [booting, setBooting] = useState(true);
   const [activeRoute, setActiveRoute] = useState<string>("Home");
-  const { isCreatingSpot } = useSpotCreation(); // ✅ Now inside the provider
+  const { isCreatingSpot } = useSpotCreation();
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -152,6 +151,7 @@ function NavigatorContent() {
                 name="Home"
                 component={HomeScreen}
                 options={({ navigation }) => ({
+                  headerShown: !isCreatingSpot,
                   header: () => (
                     <HomeHeader onProfile={() => navigation.navigate("Profile")} />
                   ),

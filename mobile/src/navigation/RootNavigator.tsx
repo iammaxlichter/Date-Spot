@@ -192,13 +192,21 @@ function NavigatorContent() {
               <Stack.Screen
                 name="Followers"
                 component={FollowersListScreen}
-                options={{ title: "Followers" }}
+                options={{
+                  title: "Followers",
+                  headerShadowVisible: false,
+                }}
               />
+
               <Stack.Screen
                 name="Following"
                 component={FollowingListScreen}
-                options={{ title: "Following" }}
+                options={{
+                  title: "Following",
+                  headerShadowVisible: false,
+                }}
               />
+
             </>
           ) : (
             <>

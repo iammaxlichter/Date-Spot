@@ -10,6 +10,7 @@ import {
   Alert,
 } from "react-native";
 import { supabase } from "../../../lib/supabase";
+import { useNavigation } from "@react-navigation/native";
 
 type UserRow = {
   id: string;
@@ -18,6 +19,8 @@ type UserRow = {
 };
 
 export default function UsersTab() {
+  const navigation = useNavigation<any>();
+
   const [q, setQ] = React.useState("");
   const [loading, setLoading] = React.useState(false);
   const [results, setResults] = React.useState<UserRow[]>([]);
@@ -108,18 +111,22 @@ export default function UsersTab() {
     debounceRef.current = setTimeout(() => runSearch(sanitized), 250);
   };
 
+  const openProfile = (profileUserId: string) => {
+    if (profileUserId === myId) navigation.navigate("Profile");
+    else navigation.navigate("UserProfile", { userId: profileUserId });
+  };
+
   const toggleFollow = async (targetUserId: string) => {
     if (!myId) {
       Alert.alert("Not logged in", "Please log in again.");
       return;
     }
 
-    if (togglingId) return; // prevent spam taps
+    if (togglingId) return;
     setTogglingId(targetUserId);
 
     const isFollowing = followingIds.has(targetUserId);
 
-    // Optimistic UI
     setFollowingIds((prev) => {
       const next = new Set(prev);
       if (isFollowing) next.delete(targetUserId);
@@ -144,9 +151,7 @@ export default function UsersTab() {
 
         if (error) throw error;
       }
-      // ✅ counts are updated automatically by DB triggers
     } catch (e: any) {
-      // Revert optimistic UI on failure
       setFollowingIds((prev) => {
         const next = new Set(prev);
         if (isFollowing) next.add(targetUserId);
@@ -165,14 +170,14 @@ export default function UsersTab() {
     const isBusy = togglingId === item.id;
 
     return (
-      <View
+      <TouchableOpacity
+        activeOpacity={0.85}
+        onPress={() => openProfile(item.id)}
         style={{
           flexDirection: "row",
           alignItems: "center",
           paddingHorizontal: 16,
           paddingVertical: 12,
-          borderBottomWidth: 1,
-          borderBottomColor: "#eee",
         }}
       >
         <Image
@@ -184,12 +189,15 @@ export default function UsersTab() {
           style={{ width: 42, height: 42, borderRadius: 21, marginRight: 12 }}
         />
 
-        <View style={{ flex: 1 }}>
+        <View style={{ flex: 1, backgroundColor: "#fff" }}>
           <Text style={{ fontWeight: "700" }}>@{item.username}</Text>
         </View>
 
         <TouchableOpacity
-          onPress={() => toggleFollow(item.id)}
+          onPress={(e) => {
+            e.stopPropagation(); // ✅ prevents row press when tapping button
+            toggleFollow(item.id);
+          }}
           disabled={isBusy}
           style={{
             backgroundColor: isFollowing ? "#fff" : "#111",
@@ -210,13 +218,13 @@ export default function UsersTab() {
             {isFollowing ? "Following" : "Follow"}
           </Text>
         </TouchableOpacity>
-      </View>
+      </TouchableOpacity>
     );
   };
 
   return (
-    <View style={{ flex: 1 }}>
-      <View style={{ padding: 16, borderBottomWidth: 1, borderBottomColor: "#eee" }}>
+    <View style={{ flex: 1, backgroundColor: "#fff" }}>
+      <View style={{ padding: 16 }}>
         <TextInput
           value={q}
           onChangeText={onChange}
@@ -244,9 +252,9 @@ export default function UsersTab() {
         keyboardShouldPersistTaps="handled"
         ListEmptyComponent={
           q.trim().length >= 2 && !loading ? (
-            <Text style={{ padding: 16, color: "#666" }}>No users found.</Text>
+            <Text style={{ marginLeft: 16, color: "#666" }}>No users found.</Text>
           ) : (
-            <Text style={{ padding: 16, color: "#666" }}>
+            <Text style={{ marginLeft: 16, color: "#666" }}>
               Type at least 2 characters.
             </Text>
           )

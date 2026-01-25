@@ -543,18 +543,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     backgroundColor: "#fff",
-    borderBottomWidth: 1,
-    borderBottomColor: "#eee",
-    minHeight: 72,
   },
   userItemPressed: {
     backgroundColor: "#f5f5f5",
   },
 
   avatar: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    marginRight: 12,
   },
 
   userRow: {
@@ -562,8 +560,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     width: "100%",
     justifyContent: "space-between",
-    paddingHorizontal: 26,
-    marginBottom: 12,
+    paddingHorizontal: 16,
+    marginBottom: 16
   },
 
   leftBlock: {
@@ -576,7 +574,6 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     fontSize: 16,
     color: "#000",
-    marginLeft: 12,
   },
 
   rightActions: {
@@ -588,7 +585,7 @@ const styles = StyleSheet.create({
   followBtn: {
     paddingHorizontal: 14,
     paddingVertical: 8,
-    borderRadius: 10,
+    borderRadius: 999,
     borderWidth: 1,
   },
 

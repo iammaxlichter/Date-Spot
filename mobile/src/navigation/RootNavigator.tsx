@@ -14,7 +14,7 @@ import { SafeAreaProvider, useSafeAreaInsets } from "react-native-safe-area-cont
 
 import RegisterScreen from "../screens/RegisterScreen";
 import LoginScreen from "../screens/LoginScreen";
-import HomeScreen from "../screens/Home/HomeScreen";
+import MapScreen from "../screens/Map/MapScreen";
 import ProfileScreen from "../screens/ProfileScreen";
 import { supabase } from "../lib/supabase";
 import {
@@ -26,10 +26,12 @@ import FollowersListScreen from "../screens/FollowersListScreen";
 import FollowingListScreen from "../screens/FollowingListScreen";
 import UserProfileScreen from "../screens/UserProfileScreen";
 import { SpotCreationProvider, useSpotCreation } from "../contexts/SpotCreationContext";
+import FeedScreen from "../screens/Feed/FeedScreen";
 
 export type RootStackParamList = {
   Register: undefined;
   Login: undefined;
+  Feed: undefined;
   Home: undefined;
   Profile: undefined;
   Search: undefined;
@@ -42,7 +44,7 @@ export type RootStackParamList = {
 const Stack = createNativeStackNavigator<RootStackParamList>();
 export const navigationRef = createNavigationContainerRef<RootStackParamList>();
 
-function HomeHeader({ onProfile }: { onProfile: () => void }) {
+function FeedHeader({ onProfile }: { onProfile: () => void }) {
   const insets = useSafeAreaInsets();
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
 
@@ -89,7 +91,7 @@ function HomeHeader({ onProfile }: { onProfile: () => void }) {
           justifyContent: "space-between",
         }}
       >
-        <Text style={{ fontSize: 18, fontWeight: "600" }}>Home</Text>
+        <Text style={{ fontSize: 18, fontWeight: "600" }}>Feed</Text>
 
         <TouchableOpacity onPress={onProfile}>
           <Image
@@ -109,7 +111,7 @@ function HomeHeader({ onProfile }: { onProfile: () => void }) {
 function NavigatorContent() {
   const [session, setSession] = useState<any>(null);
   const [booting, setBooting] = useState(true);
-  const [activeRoute, setActiveRoute] = useState<string>("Home");
+  const [activeRoute, setActiveRoute] = useState<string>("Feed");
   const { isCreatingSpot } = useSpotCreation();
 
   useEffect(() => {
@@ -148,15 +150,16 @@ function NavigatorContent() {
           {session ? (
             <>
               <Stack.Screen
-                name="Home"
-                component={HomeScreen}
+                name="Feed"
+                component={FeedScreen}
                 options={({ navigation }) => ({
-                  headerShown: !isCreatingSpot,
+                  headerShown: true,
                   header: () => (
-                    <HomeHeader onProfile={() => navigation.navigate("Profile")} />
+                    <FeedHeader onProfile={() => navigation.navigate("Profile")} />
                   ),
                 })}
               />
+
               <Stack.Screen
                 name="Profile"
                 component={ProfileScreen}
@@ -227,7 +230,7 @@ function NavigatorContent() {
           <BottomOverlay
             activeRoute={activeRoute}
             onGoHome={() => {
-              if (navigationRef.isReady()) navigationRef.navigate("Home");
+              if (navigationRef.isReady()) navigationRef.navigate("Feed");
             }}
             onSearch={() => {
               if (navigationRef.isReady()) navigationRef.navigate("Search");
@@ -236,6 +239,7 @@ function NavigatorContent() {
               if (navigationRef.isReady()) navigationRef.navigate("Profile");
             }}
           />
+
         )}
       </View>
     </NavigationContainer>

@@ -2,8 +2,8 @@
 import React from "react";
 import { View, Text, TouchableOpacity, TextInput, Keyboard } from "react-native";
 import type { Place } from "../../../lib/api/places";
-import type { GooglePrediction } from "../../../screens/Home/types";
-import { styles } from "../../../screens/styles";
+import type { GooglePrediction } from "../types";
+import { styles } from "../../styles";
 import { SuggestionsDropdown } from "./SuggestionsDropdown";
 
 export function TopOverlay(props: {

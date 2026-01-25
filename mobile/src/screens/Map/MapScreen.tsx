@@ -1,14 +1,16 @@
-// src/screens/Home/HomeScreen.tsx
-import React, { useRef, useEffect } from "react";
+// src/screens/Map/MapScreen.tsx
+import React, { useRef, useEffect, useCallback } from "react";
 import { View, ActivityIndicator, Alert, Text, Keyboard } from "react-native";
 import MapView, { Region } from "react-native-maps";
+
+import { useFocusEffect } from "@react-navigation/native";
 import { NewSpotSheet } from "../NewSpotSheet";
 
 import { useInitialRegionAndSpots } from "./hooks/useInitialRegionAndSpots";
 import { useSpotSearch } from "./hooks/useSpotSearch";
 import { usePlacesAutocomplete } from "./hooks/usePlacesAutocomplete";
 import { useSpotCreation } from "./hooks/useSpotCreation";
-import { useSpotCreation as useSpotCreationContext } from "../../contexts/SpotCreationContext"; // ✅ Import the context
+import { useSpotCreation as useSpotCreationContext } from "../../contexts/SpotCreationContext";
 
 import { fetchPlaceDetails } from "../../lib/google/places";
 import { ZOOM_TO_GOOGLE_PLACE, ZOOM_TO_SAVED_SPOT } from "./constants";
@@ -20,9 +22,19 @@ import { SpotsMap } from "./components/SpotsMap";
 import type { Place } from "../../lib/api/places";
 import { getNearbyPlaces } from "../../lib/api/places";
 
-export default function HomeScreen({ navigation }: any) {
+export default function MapScreen({ navigation }: any) {
   const mapRef = useRef<MapView | null>(null);
-  const { setIsCreatingSpot } = useSpotCreationContext(); // ✅ Get the context setter
+  const { setIsCreatingSpot } = useSpotCreationContext();
+
+  useFocusEffect(
+    useCallback(() => {
+      // when MapScreen loses focus (back nav, switching stacks, etc.)
+      return () => {
+        setIsCreatingSpot(false);
+      };
+    }, [setIsCreatingSpot])
+  );
+
 
   const { region, setRegion, loading, permissionDenied, spots, setSpots } =
     useInitialRegionAndSpots();

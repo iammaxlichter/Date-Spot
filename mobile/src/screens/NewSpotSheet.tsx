@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   TouchableWithoutFeedback,
   Keyboard,
+  ScrollView,
 } from "react-native";
 import { styles } from "./styles";
 import { sanitizeOneToTenInput } from "../lib/utils/numberInputValidation";
@@ -111,165 +112,171 @@ export function NewSpotSheet({
   );
 
   const [isCustomVibe, setIsCustomVibe] = React.useState<boolean>(
-  !!vibe && !isPresetVibe(vibe)
+    !!vibe && !isPresetVibe(vibe)
   );
 
 
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-      <View style={[styles.bottomSheet, { paddingTop: insets.top + 12 }]}>
-        <Text style={styles.sheetTitle}>New Date Spot</Text>
+      <View style={styles.bottomSheet}>
+        <ScrollView
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ paddingBottom: 24 }}
+        >
+          <Text style={styles.sheetTitle}>New Date Spot</Text>
 
-        <Text style={styles.label}>Name</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="Restaurant, café, park…"
-          value={name}
-          onChangeText={onChangeName}
-          returnKeyType="done"
-          onSubmitEditing={Keyboard.dismiss}
-        />
-
-        <View style={styles.row}>
-          <View style={{ flex: 1, marginRight: 6 }}>
-            <Text style={styles.label}>Atmosphere (1 - 10)</Text>
-            <TextInput
-              style={styles.input}
-              keyboardType="number-pad"
-              value={atmosphere}
-              onChangeText={(text) => onChangeAtmosphere(sanitizeOneToTenInput(text))}
-              returnKeyType="done"
-              onSubmitEditing={Keyboard.dismiss}
-            />
-          </View>
-
-          <View style={{ flex: 1, marginLeft: 6 }}>
-            <Text style={styles.label}>Date Score (1 - 10)</Text>
-            <TextInput
-              style={styles.input}
-              keyboardType="number-pad"
-              value={dateScore}
-              onChangeText={(text) => onChangeDateScore(sanitizeOneToTenInput(text))}
-              returnKeyType="done"
-              onSubmitEditing={Keyboard.dismiss}
-            />
-          </View>
-        </View>
-
-        <Text style={styles.label}>Notes</Text>
-        <TextInput
-          style={[styles.input, { height: 90, textAlignVertical: "top" }]}
-          placeholder="Anything to remember…"
-          value={notes}
-          onChangeText={onChangeNotes}
-          multiline
-          returnKeyType="done"
-          onSubmitEditing={Keyboard.dismiss}
-        />
-
-        <Text style={styles.label}>Vibe</Text>
-        <View style={{ flexDirection: "row", flexWrap: "wrap" }}>
-          {vibePresets.map((v) => (
-            <Chip
-              key={v}
-              label={v}
-              selected={vibe === v}
-              onPress={() => {
-                setIsCustomVibe(false);
-                setCustomVibe("");
-                onChangeVibe(vibe === v ? null : v);
-              }}
-            />
-          ))}
-
-          <Chip
-            label="Other"
-            selected={!!vibe && !isPresetVibe(vibe)}
-            onPress={() => {
-              Keyboard.dismiss();
-              setIsCustomVibe((prev) => !prev);
-
-              // If turning OFF custom mode, clear vibe
-              if (isCustomVibe) {
-                setCustomVibe("");
-                onChangeVibe(null);
-              } else {
-                // Turning ON custom mode: keep current customVibe (or empty)
-                onChangeVibe(customVibe.trim() ? customVibe.trim() : null);
-              }
-            }}
-
-          />
-        </View>
-
-        {isCustomVibe && (
+          <Text style={styles.label}>Name</Text>
           <TextInput
             style={styles.input}
-            placeholder="Type a custom vibe…"
-            value={customVibe}
-            onChangeText={(text) => {
-              setCustomVibe(text);
-              const trimmed = text.trim();
-              onChangeVibe(trimmed.length ? trimmed : null);
-            }}
+            placeholder="Restaurant, café, park…"
+            value={name}
+            onChangeText={onChangeName}
             returnKeyType="done"
             onSubmitEditing={Keyboard.dismiss}
           />
-        )}
 
-        <Text style={styles.label}>Price</Text>
-        <View style={{ flexDirection: "row", flexWrap: "wrap" }}>
-          {prices.map((p) => (
-            <Chip
-              key={p}
-              label={p}
-              selected={price === p}
-              onPress={() => onChangePrice(price === p ? null : p)}
-            />
-          ))}
-        </View>
+          <View style={styles.row}>
+            <View style={{ flex: 1, marginRight: 6 }}>
+              <Text style={styles.label}>Atmosphere (1 - 10)</Text>
+              <TextInput
+                style={styles.input}
+                keyboardType="number-pad"
+                value={atmosphere}
+                onChangeText={(text) => onChangeAtmosphere(sanitizeOneToTenInput(text))}
+                returnKeyType="done"
+                onSubmitEditing={Keyboard.dismiss}
+              />
+            </View>
 
-        <Text style={styles.label}>Best for</Text>
-        <View style={{ flexDirection: "row", flexWrap: "wrap" }}>
-          {bestFors.map((b) => (
-            <Chip
-              key={b}
-              label={b}
-              selected={bestFor === b}
-              onPress={() => onChangeBestFor(bestFor === b ? null : b)}
-            />
-          ))}
-        </View>
+            <View style={{ flex: 1, marginLeft: 6 }}>
+              <Text style={styles.label}>Date Score (1 - 10)</Text>
+              <TextInput
+                style={styles.input}
+                keyboardType="number-pad"
+                value={dateScore}
+                onChangeText={(text) => onChangeDateScore(sanitizeOneToTenInput(text))}
+                returnKeyType="done"
+                onSubmitEditing={Keyboard.dismiss}
+              />
+            </View>
+          </View>
 
-        <Text style={styles.label}>Would return?</Text>
-        <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 10 }}>
-          <Chip
-            label="Yes"
-            selected={wouldReturn === true}
-            onPress={() => onChangeWouldReturn(true)}
+          <Text style={styles.label}>Notes</Text>
+          <TextInput
+            style={[styles.input, { height: 90, textAlignVertical: "top" }]}
+            placeholder="Anything to remember…"
+            value={notes}
+            onChangeText={onChangeNotes}
+            multiline
+            returnKeyType="done"
+            onSubmitEditing={Keyboard.dismiss}
           />
-          <Chip
-            label="No"
-            selected={wouldReturn === false}
-            onPress={() => onChangeWouldReturn(false)}
-          />
-        </View>
 
-        <View style={styles.actionsRow}>
-          <TouchableOpacity
-            style={[styles.actionButton, styles.cancelButton]}
-            onPress={onCancel}
-          >
-            <Text style={styles.cancelText}>Cancel</Text>
-          </TouchableOpacity>
+          <Text style={styles.label}>Vibe</Text>
+          <View style={{ flexDirection: "row", flexWrap: "wrap" }}>
+            {vibePresets.map((v) => (
+              <Chip
+                key={v}
+                label={v}
+                selected={vibe === v}
+                onPress={() => {
+                  setIsCustomVibe(false);
+                  setCustomVibe("");
+                  onChangeVibe(vibe === v ? null : v);
+                }}
+              />
+            ))}
 
-          <TouchableOpacity
-            style={[styles.actionButton, styles.saveButton]}
-            onPress={onSave}
-          >
-            <Text style={styles.saveText}>Save</Text>
-          </TouchableOpacity>
-        </View>
+            <Chip
+              label="Other"
+              selected={!!vibe && !isPresetVibe(vibe)}
+              onPress={() => {
+                Keyboard.dismiss();
+                setIsCustomVibe((prev) => !prev);
+
+                // If turning OFF custom mode, clear vibe
+                if (isCustomVibe) {
+                  setCustomVibe("");
+                  onChangeVibe(null);
+                } else {
+                  // Turning ON custom mode: keep current customVibe (or empty)
+                  onChangeVibe(customVibe.trim() ? customVibe.trim() : null);
+                }
+              }}
+
+            />
+          </View>
+
+          {isCustomVibe && (
+            <TextInput
+              style={styles.input}
+              placeholder="Type a custom vibe…"
+              value={customVibe}
+              onChangeText={(text) => {
+                setCustomVibe(text);
+                const trimmed = text.trim();
+                onChangeVibe(trimmed.length ? trimmed : null);
+              }}
+              returnKeyType="done"
+              onSubmitEditing={Keyboard.dismiss}
+            />
+          )}
+
+          <Text style={styles.label}>Price</Text>
+          <View style={{ flexDirection: "row", flexWrap: "wrap" }}>
+            {prices.map((p) => (
+              <Chip
+                key={p}
+                label={p}
+                selected={price === p}
+                onPress={() => onChangePrice(price === p ? null : p)}
+              />
+            ))}
+          </View>
+
+          <Text style={styles.label}>Best for</Text>
+          <View style={{ flexDirection: "row", flexWrap: "wrap" }}>
+            {bestFors.map((b) => (
+              <Chip
+                key={b}
+                label={b}
+                selected={bestFor === b}
+                onPress={() => onChangeBestFor(bestFor === b ? null : b)}
+              />
+            ))}
+          </View>
+
+          <Text style={styles.label}>Would return?</Text>
+          <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 10 }}>
+            <Chip
+              label="Yes"
+              selected={wouldReturn === true}
+              onPress={() => onChangeWouldReturn(true)}
+            />
+            <Chip
+              label="No"
+              selected={wouldReturn === false}
+              onPress={() => onChangeWouldReturn(false)}
+            />
+          </View>
+
+          <View style={styles.actionsRow}>
+            <TouchableOpacity
+              style={[styles.actionButton, styles.cancelButton]}
+              onPress={onCancel}
+            >
+              <Text style={styles.cancelText}>Cancel</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.actionButton, styles.saveButton]}
+              onPress={onSave}
+            >
+              <Text style={styles.saveText}>Save</Text>
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
       </View>
     </TouchableWithoutFeedback>
   );

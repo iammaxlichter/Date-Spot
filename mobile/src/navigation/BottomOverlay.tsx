@@ -12,7 +12,7 @@ export function BottomOverlay(props: {
   const { activeRoute, onGoHome, onSearch, onGoProfile } = props;
 
   const isSearch = activeRoute === "Search";
-  const isHome = activeRoute === "Home";
+  const isHome = activeRoute === "Feed";
   const isProfile = activeRoute === "Profile";
 
   return (

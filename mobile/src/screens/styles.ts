@@ -158,7 +158,7 @@ export const styles = StyleSheet.create({
 
   pinGuideCard: {
     position: "absolute",
-    top: 40,
+    top: -20,
     left: 20,
     right: 20,
     paddingVertical: 16,

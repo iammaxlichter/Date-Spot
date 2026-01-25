@@ -10,6 +10,7 @@ import {
   Pressable,
   RefreshControl,
   StyleSheet,
+  Alert,
 } from "react-native";
 import { supabase } from "../lib/supabase";
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
@@ -18,6 +19,8 @@ type Row = {
   id: string;
   username: string | null;
   avatar_url: string | null;
+  isFollowing?: boolean;
+  updating?: boolean;
 };
 
 type FollowJoinRow = {
@@ -51,6 +54,7 @@ export default function FollowingListScreen({ route }: any) {
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
+  
   // Load function without page/hasMore in dependencies
   const load = React.useCallback(
     async (opts?: { reset?: boolean }) => {
@@ -113,7 +117,9 @@ export default function FollowingListScreen({ route }: any) {
         // Process results
         const newRows: Row[] = (data ?? [])
           .map((r) => r.following)
-          .filter(Boolean) as Row[];
+          .filter(Boolean)
+          .map((u) => ({ ...u, isFollowing: true, updating: false })) as Row[];
+
 
         setRows((prev) => (reset ? newRows : [...prev, ...newRows]));
 
@@ -185,6 +191,69 @@ export default function FollowingListScreen({ route }: any) {
     [currentUserId, navigation]
   );
 
+  const toggleFollowFromList = React.useCallback(
+    async (targetUserId: string) => {
+      if (!currentUserId) return;
+
+      // Prevent double-taps on same row
+      const row = rows.find((r) => r.id === targetUserId);
+      if (row?.updating) return;
+
+      // Optimistic UI update
+      setRows((prev) =>
+        prev.map((r) =>
+          r.id === targetUserId
+            ? { ...r, isFollowing: !r.isFollowing, updating: true }
+            : r
+        )
+      );
+
+      const nextIsFollowing = !(row?.isFollowing ?? true);
+
+      try {
+        if (nextIsFollowing) {
+          const { error } = await supabase.from("follows").insert({
+            follower_id: currentUserId,
+            following_id: targetUserId,
+          });
+
+          // If already exists, treat as success
+          if (error && (error as any).code !== "23505") throw error;
+        } else {
+          const { error } = await supabase
+            .from("follows")
+            .delete()
+            .eq("follower_id", currentUserId)
+            .eq("following_id", targetUserId);
+
+          if (error) throw error;
+        }
+      } catch (e) {
+        console.error("Toggle follow failed:", e);
+
+        // Rollback optimistic change
+        setRows((prev) =>
+          prev.map((r) =>
+            r.id === targetUserId
+              ? { ...r, isFollowing: row?.isFollowing ?? true, updating: false }
+              : r
+          )
+        );
+
+        Alert.alert("Error", "Could not update follow status.");
+        return;
+      }
+
+      // End updating state
+      setRows((prev) =>
+        prev.map((r) =>
+          r.id === targetUserId ? { ...r, updating: false } : r
+        )
+      );
+    },
+    [currentUserId, rows]
+  );
+
   const handleLoadMore = React.useCallback(() => {
     if (!loading && !refreshing && hasMoreRef.current) {
       load();
@@ -251,19 +320,38 @@ export default function FollowingListScreen({ route }: any) {
               pressed && styles.userItemPressed,
             ]}
           >
-            {/* HARD-ENFORCE the horizontal row here */}
             <View style={styles.userRow}>
-              <Image
-                source={
-                  item.avatar_url
-                    ? { uri: item.avatar_url }
-                    : require("../../assets/default-avatar.png")
-                }
-                style={styles.avatar}
-                resizeMode="cover"
-              />
+              <View style={styles.leftBlock}>
+                <Image
+                  source={
+                    item.avatar_url
+                      ? { uri: item.avatar_url }
+                      : require("../../assets/default-avatar.png")
+                  }
+                  style={styles.avatar}
+                  resizeMode="cover"
+                />
+                <Text style={styles.username}>@{item.username ?? "unknown"}</Text>
+              </View>
 
-              <Text style={styles.username}>@{item.username ?? "unknown"}</Text>
+              <Pressable
+                onPress={() => toggleFollowFromList(item.id)}
+                disabled={item.updating}
+                style={[
+                  styles.followBtn,
+                  item.isFollowing ? styles.followingBtn : styles.followBtnPrimary,
+                  item.updating && { opacity: 0.6 },
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.followBtnText,
+                    item.isFollowing ? styles.followingBtnText : styles.followBtnTextPrimary,
+                  ]}
+                >
+                  {item.updating ? "..." : item.isFollowing ? "Following" : "Follow"}
+                </Text>
+              </Pressable>
             </View>
           </Pressable>
         )}
@@ -286,8 +374,6 @@ const styles = StyleSheet.create({
   searchContainer: {
     padding: 12,
     backgroundColor: "#fff",
-    borderBottomWidth: 1,
-    borderBottomColor: "#eee",
   },
   searchInput: {
     height: 40,
@@ -331,27 +417,64 @@ const styles = StyleSheet.create({
   userItemPressed: {
     backgroundColor: "#f5f5f5",
   },
- 
+
   avatar: {
     width: 48,
     height: 48,
     borderRadius: 24,
   },
 
-userRow: {
-  flexDirection: "row",
-  alignItems: "center",
-  paddingHorizontal: 16,
-  paddingVertical: 12,
-  minHeight: 72,
-  width: "100%",
-},
+  userRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    width: "100%",
+    justifyContent: "space-between",
+    paddingHorizontal: 28,
+    marginBottom: 12
+  },
 
+  leftBlock: {
+    flexDirection: "row",
+    alignItems: "center",
+    flexShrink: 1,
+  },
 
-username: {
-  fontWeight: "600",
-  fontSize: 16,
-  color: "#000",
-},
+  username: {
+    fontWeight: "600",
+    fontSize: 16,
+    color: "#000",
+    marginLeft: 12,
+  },
+
+  followBtn: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 10,
+    borderWidth: 1,
+  },
+
+  followBtnPrimary: {
+    backgroundColor: "#111",
+    borderColor: "#111",
+  },
+
+  followingBtn: {
+    backgroundColor: "#fff",
+    borderColor: "#ddd",
+  },
+
+  followBtnText: {
+    fontWeight: "700",
+    fontSize: 13,
+  },
+
+  followBtnTextPrimary: {
+    color: "#fff",
+  },
+
+  followingBtnText: {
+    color: "#111",
+  },
+
 
 });

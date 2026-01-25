@@ -11,11 +11,13 @@ import {
   ImageSourcePropType,
   ScrollView,
   RefreshControl,
+  TextInput
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import { supabase } from "../lib/supabase";
 import { uploadProfilePicture } from "../lib/supabase/uploadProfilePicture";
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
+import { Modal } from "react-native";
 
 type ProfileRow = {
   id: string;
@@ -55,6 +57,10 @@ export default function ProfileScreen() {
   const [refreshing, setRefreshing] = React.useState(false);
   const [uploading, setUploading] = React.useState(false);
   const [profile, setProfile] = React.useState<ProfileRow | null>(null);
+  const [editOpen, setEditOpen] = React.useState(false);
+  const [nameDraft, setNameDraft] = React.useState("");
+  const [savingName, setSavingName] = React.useState(false);
+
 
   const loadProfile = React.useCallback(async (): Promise<void> => {
     const { data: userRes, error: userErr } = await supabase.auth.getUser();
@@ -138,6 +144,52 @@ export default function ProfileScreen() {
       })();
     }, [loadProfile])
   );
+
+  const saveName = React.useCallback(async () => {
+    if (savingName) return;
+
+    try {
+      const next = nameDraft.trim();
+      if (!next) {
+        Alert.alert("Name required", "Please enter a name.");
+        return;
+      }
+
+      setSavingName(true);
+
+      const { data: userRes, error: userErr } = await supabase.auth.getUser();
+      if (userErr) throw userErr;
+      const user = userRes.user;
+      if (!user) throw new Error("Not authenticated");
+
+      const { data: updated, error: updateErr } = await supabase
+        .from("profiles")
+        .update({ name: next })
+        .eq("id", user.id)
+        .select("id,name,username,avatar_url,followers_count,following_count")
+        .single();
+
+      if (updateErr) throw updateErr;
+
+      setProfile((p) =>
+        p
+          ? {
+            ...(updated as ProfileRow),
+            followers_count: p.followers_count,
+            following_count: p.following_count,
+          }
+          : (updated as ProfileRow)
+      );
+
+      setEditOpen(false);
+    } catch (e: any) {
+      console.error(e);
+      Alert.alert("Update failed", e?.message ?? "Could not update name.");
+    } finally {
+      setSavingName(false);
+    }
+  }, [nameDraft, savingName]);
+
 
   const onRefresh = React.useCallback(async () => {
     try {
@@ -240,7 +292,14 @@ export default function ProfileScreen() {
 
       {profile.username ? <Text style={s.username}>@{profile.username}</Text> : null}
 
-      <Text style={s.name}>{profile.name ?? "Your Name"}</Text>
+      <Pressable
+        onPress={() => {
+          setNameDraft(profile.name ?? "");
+          setEditOpen(true);
+        }}
+      >
+        <Text style={s.name}>{profile.name ?? "Your Name"}</Text>
+      </Pressable>
 
       <View style={s.statsRow}>
         <Pressable
@@ -259,6 +318,59 @@ export default function ProfileScreen() {
           <Text style={s.statLabel}>Following</Text>
         </Pressable>
       </View>
+
+      <Modal
+        visible={editOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setEditOpen(false)}
+      >
+        <View style={s.modalBackdrop}>
+          <View style={s.modalCard}>
+            <Text style={s.modalTitle}>Edit name</Text>
+
+            <TextInput
+              value={nameDraft}
+              onChangeText={setNameDraft}
+              placeholder="Your name"
+              style={s.modalInput}
+              autoCapitalize="words"
+              autoCorrect={false}
+              maxLength={40}
+            />
+
+            <View style={s.modalButtons}>
+              <Pressable
+                onPress={() => setEditOpen(false)}
+                disabled={savingName}
+                style={[
+                  s.modalBtn,
+                  s.modalBtnSecondary,
+                  savingName && { opacity: 0.6 },
+                ]}
+              >
+                <Text style={s.modalBtnTextSecondary}>Cancel</Text>
+              </Pressable>
+
+
+              <Pressable
+                onPress={saveName}
+                disabled={savingName}
+                style={[
+                  s.modalBtn,
+                  s.modalBtnPrimary,
+                  savingName && { opacity: 0.6 },
+                ]}
+              >
+                <Text style={s.modalBtnTextPrimary}>
+                  {savingName ? "Saving..." : "Save"}
+                </Text>
+              </Pressable>
+
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       <View style={{ height: 80 }} />
     </ScrollView>
@@ -300,4 +412,48 @@ const s = StyleSheet.create({
   statLabel: { marginTop: 4, fontSize: 13, color: "#666" },
   hint: { marginBottom: 30, fontSize: 11, color: "#666" },
   username: { fontSize: 14, color: "#666", marginBottom: 10 },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.35)",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 20,
+  },
+  modalCard: {
+    width: "100%",
+    maxWidth: 420,
+    backgroundColor: "#fff",
+    borderRadius: 14,
+    padding: 16,
+  },
+  modalTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+    marginBottom: 10,
+  },
+  modalInput: {
+    height: 44,
+    borderWidth: 1,
+    borderColor: "#ddd",
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    fontSize: 15,
+    backgroundColor: "#fff",
+  },
+  modalButtons: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    gap: 10,
+    marginTop: 14,
+  },
+  modalBtn: {
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 10,
+  },
+  modalBtnPrimary: { backgroundColor: "#111" },
+  modalBtnSecondary: { backgroundColor: "#f2f2f2" },
+  modalBtnTextPrimary: { color: "#fff", fontWeight: "700" },
+  modalBtnTextSecondary: { color: "#111", fontWeight: "700" },
+
 });

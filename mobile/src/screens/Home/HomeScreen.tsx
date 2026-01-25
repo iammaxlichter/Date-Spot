@@ -1,5 +1,5 @@
-// src/screens/HomeScreen.tsx
-import React, { useRef } from "react";
+// src/screens/Home/HomeScreen.tsx
+import React, { useRef, useEffect } from "react";
 import { View, ActivityIndicator, Alert, Text, Keyboard } from "react-native";
 import MapView, { Region } from "react-native-maps";
 import { NewSpotSheet } from "../NewSpotSheet";
@@ -8,6 +8,7 @@ import { useInitialRegionAndSpots } from "./hooks/useInitialRegionAndSpots";
 import { useSpotSearch } from "./hooks/useSpotSearch";
 import { usePlacesAutocomplete } from "./hooks/usePlacesAutocomplete";
 import { useSpotCreation } from "./hooks/useSpotCreation";
+import { useSpotCreation as useSpotCreationContext } from "../../contexts/SportCreationContext"; // ✅ Import the context
 
 import { fetchPlaceDetails } from "../../lib/google/places";
 import { ZOOM_TO_GOOGLE_PLACE, ZOOM_TO_SAVED_SPOT } from "./constants";
@@ -22,6 +23,7 @@ import { supabase } from "../../lib/supabase";
 
 export default function HomeScreen({ navigation }: any) {
   const mapRef = useRef<MapView | null>(null);
+  const { setIsCreatingSpot } = useSpotCreationContext(); // ✅ Get the context setter
 
   const { region, setRegion, loading, permissionDenied, spots, setSpots } =
     useInitialRegionAndSpots();
@@ -47,7 +49,6 @@ export default function HomeScreen({ navigation }: any) {
   };
 
   const spotCreation = useSpotCreation({
-    // ✅ After insert, re-fetch so markers/list are correct and filtered
     onSaved: async () => {
       try {
         await refreshSpots();
@@ -56,6 +57,12 @@ export default function HomeScreen({ navigation }: any) {
       }
     },
   });
+
+  // ✅ Update the context whenever spot creation state changes
+  useEffect(() => {
+    const isCreating = spotCreation.isPlacingPin || spotCreation.showNewSpotSheet;
+    setIsCreatingSpot(isCreating);
+  }, [spotCreation.isPlacingPin, spotCreation.showNewSpotSheet, setIsCreatingSpot]);
 
   const handleSelectSavedSpot = (spot: Place) => {
     Keyboard.dismiss();
@@ -114,7 +121,7 @@ export default function HomeScreen({ navigation }: any) {
         <Text>Loading map…</Text>
       </View>
     );
-  }
+  };
 
   return (
     <View style={{ flex: 1 }}>

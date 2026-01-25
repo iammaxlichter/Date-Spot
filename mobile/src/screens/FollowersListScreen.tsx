@@ -10,6 +10,7 @@ import {
   Pressable,
   RefreshControl,
   StyleSheet,
+  Alert,
 } from "react-native";
 import { supabase } from "../lib/supabase";
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
@@ -18,6 +19,13 @@ type Row = {
   id: string;
   username: string | null;
   avatar_url: string | null;
+
+  // for button UI
+  isFollowing?: boolean;
+  updating?: boolean;
+
+  // for remove-follower (X)
+  removing?: boolean;
 };
 
 type FollowJoinRow = {
@@ -28,7 +36,7 @@ type FollowJoinRow = {
 const PAGE_SIZE = 30;
 
 export default function FollowersListScreen({ route }: any) {
-  const userId: string = route.params.userId;
+  const userId: string = route.params.userId; // profile you're viewing
   const navigation = useNavigation<any>();
 
   const [loading, setLoading] = React.useState(true);
@@ -45,18 +53,13 @@ export default function FollowersListScreen({ route }: any) {
 
   // Debounce search input
   React.useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedSearch(searchQuery);
-    }, 300);
+    const timer = setTimeout(() => setDebouncedSearch(searchQuery), 300);
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
-  // Load function without page/hasMore in dependencies
   const load = React.useCallback(
     async (opts?: { reset?: boolean }) => {
       const reset = opts?.reset ?? false;
-
-      // Don't load if we've reached the end and it's not a reset
       if (!reset && !hasMoreRef.current) return;
 
       try {
@@ -70,19 +73,20 @@ export default function FollowersListScreen({ route }: any) {
 
         setError(null);
 
-        // Get current user
+        // current user
         const { data: userRes, error: userErr } = await supabase.auth.getUser();
         if (userErr) throw userErr;
+        const me = userRes.user?.id ?? null;
 
         if (!isMountedRef.current) return;
-        setCurrentUserId(userRes.user?.id ?? null);
+        setCurrentUserId(me);
 
-        // Calculate pagination
+        // pagination
         const currentPage = reset ? 0 : pageRef.current;
         const from = currentPage * PAGE_SIZE;
         const to = from + PAGE_SIZE - 1;
 
-        // Build query
+        // followers for this profile
         let q = supabase
           .from("follows")
           .select(
@@ -99,7 +103,6 @@ export default function FollowersListScreen({ route }: any) {
           .order("created_at", { ascending: false })
           .range(from, to);
 
-        // Add search filter if present
         const trimmedSearch = debouncedSearch.trim();
         if (trimmedSearch) {
           q = q.ilike("follower.username", `%${trimmedSearch}%`);
@@ -110,22 +113,42 @@ export default function FollowersListScreen({ route }: any) {
 
         if (!isMountedRef.current) return;
 
-        // Process results
-        const newRows: Row[] = (data ?? [])
+        const baseRows: Row[] = (data ?? [])
           .map((r) => r.follower)
           .filter(Boolean) as Row[];
 
+        // If I'm logged in, determine whether I follow each of these followers
+        let followingSet = new Set<string>();
+        if (me && baseRows.length > 0) {
+          const ids = baseRows.map((r) => r.id);
+
+          const { data: mine, error: mineErr } = await supabase
+            .from("follows")
+            .select("following_id")
+            .eq("follower_id", me)
+            .in("following_id", ids);
+
+          if (mineErr) throw mineErr;
+
+          followingSet = new Set((mine ?? []).map((x: any) => x.following_id));
+        }
+
+        const newRows: Row[] = baseRows.map((u) => ({
+          ...u,
+          isFollowing: me ? followingSet.has(u.id) : false,
+          updating: false,
+          removing: false,
+        }));
+
         setRows((prev) => (reset ? newRows : [...prev, ...newRows]));
 
-        // Update pagination refs
         hasMoreRef.current = newRows.length === PAGE_SIZE;
         pageRef.current = currentPage + 1;
-
       } catch (e) {
         console.error("Failed to load followers:", e);
         if (isMountedRef.current) {
           setError("Failed to load followers. Pull to refresh.");
-          if (reset) setRows([]);
+          if (opts?.reset) setRows([]);
         }
       } finally {
         if (isMountedRef.current) {
@@ -137,7 +160,6 @@ export default function FollowersListScreen({ route }: any) {
     [userId, debouncedSearch]
   );
 
-  // Initial load on mount
   React.useEffect(() => {
     isMountedRef.current = true;
     return () => {
@@ -145,21 +167,18 @@ export default function FollowersListScreen({ route }: any) {
     };
   }, []);
 
-  // Load when userId changes
   React.useEffect(() => {
     pageRef.current = 0;
     hasMoreRef.current = true;
     load({ reset: true });
   }, [userId, load]);
 
-  // Reload when search changes
   React.useEffect(() => {
     pageRef.current = 0;
     hasMoreRef.current = true;
     load({ reset: true });
   }, [debouncedSearch, load]);
 
-  // Refresh when screen comes into focus
   useFocusEffect(
     React.useCallback(() => {
       pageRef.current = 0;
@@ -185,13 +204,170 @@ export default function FollowersListScreen({ route }: any) {
     [currentUserId, navigation]
   );
 
+  const toggleFollowFromList = React.useCallback(
+    async (targetUserId: string) => {
+      if (!currentUserId) {
+        Alert.alert("Not signed in", "Please sign in to follow people.");
+        return;
+      }
+
+      const row = rows.find((r) => r.id === targetUserId);
+      if (row?.updating) return;
+
+      if (targetUserId === currentUserId) return;
+
+      // optimistic
+      setRows((prev) =>
+        prev.map((r) =>
+          r.id === targetUserId
+            ? { ...r, isFollowing: !r.isFollowing, updating: true }
+            : r
+        )
+      );
+
+      const nextIsFollowing = !(row?.isFollowing ?? false);
+
+      try {
+        if (nextIsFollowing) {
+          const { error } = await supabase.from("follows").insert({
+            follower_id: currentUserId,
+            following_id: targetUserId,
+          });
+
+          if (error && (error as any).code !== "23505") throw error;
+        } else {
+          const { error } = await supabase
+            .from("follows")
+            .delete()
+            .eq("follower_id", currentUserId)
+            .eq("following_id", targetUserId);
+
+          if (error) throw error;
+        }
+      } catch (e) {
+        console.error("Toggle follow failed:", e);
+
+        // rollback
+        setRows((prev) =>
+          prev.map((r) =>
+            r.id === targetUserId
+              ? { ...r, isFollowing: row?.isFollowing ?? false, updating: false }
+              : r
+          )
+        );
+
+        Alert.alert("Error", "Could not update follow status.");
+        return;
+      }
+
+      // stop spinner
+      setRows((prev) =>
+        prev.map((r) =>
+          r.id === targetUserId ? { ...r, updating: false } : r
+        )
+      );
+    },
+    [currentUserId, rows]
+  );
+
+  // Remove follower (X)
+  const removeFollower = React.useCallback(
+    async (followerId: string) => {
+      if (!currentUserId) {
+        Alert.alert("Not signed in", "Please sign in.");
+        return;
+      }
+
+      // Only allow removing followers from your own profile
+      if (userId !== currentUserId) {
+        Alert.alert("Not allowed", "You can only remove followers from your own profile.");
+        return;
+      }
+
+      const row = rows.find((r) => r.id === followerId);
+      if (row?.removing) return;
+
+      Alert.alert(
+        "Remove follower?",
+        `@${row?.username || 'This user'} will no longer follow you.`,
+        [
+          { text: "Cancel", style: "cancel" },
+          {
+            text: "Remove",
+            style: "destructive",
+            onPress: async () => {
+              // Save snapshot for potential rollback
+              const snapshot = [...rows];
+
+              // Optimistic: remove from UI immediately
+              setRows((prev) => prev.filter((r) => r.id !== followerId));
+
+              try {
+                console.log("Attempting to delete:", {
+                  follower_id: followerId,
+                  following_id: userId,
+                  currentUserId: currentUserId,
+                });
+
+                // First, verify the relationship exists
+                const { data: existing, error: checkError } = await supabase
+                  .from("follows")
+                  .select("*")
+                  .eq("follower_id", followerId)
+                  .eq("following_id", userId);
+
+                if (checkError) {
+                  console.error("Check error:", checkError);
+                  throw checkError;
+                }
+
+                console.log("Existing relationship:", existing);
+
+                if (!existing || existing.length === 0) {
+                  throw new Error("Follow relationship does not exist in database");
+                }
+
+                // Now try to delete
+                const { error, count } = await supabase
+                  .from("follows")
+                  .delete({ count: "exact" })
+                  .eq("follower_id", followerId)
+                  .eq("following_id", userId);
+
+                if (error) {
+                  console.error("Delete error:", error);
+                  throw error;
+                }
+
+                console.log("Deleted rows:", count);
+
+                // If no rows were deleted, it's an RLS policy issue
+                if (count === 0) {
+                  throw new Error("Delete blocked by RLS policy - check your Supabase policies");
+                }
+
+              } catch (e) {
+                console.error("Remove follower failed:", e);
+
+                // Rollback: restore the original list
+                setRows(snapshot);
+
+                const errorMsg = e instanceof Error ? e.message : "Could not remove follower";
+                Alert.alert("Error", errorMsg);
+              }
+            },
+          },
+        ],
+        { cancelable: true }
+      );
+    },
+    [currentUserId, rows, userId]
+  );
+
   const handleLoadMore = React.useCallback(() => {
-    if (!loading && !refreshing && hasMoreRef.current) {
-      load();
-    }
+    if (!loading && !refreshing && hasMoreRef.current) load();
   }, [loading, refreshing, load]);
 
-  // Initial loading state
   if (loading && rows.length === 0 && !error) {
     return (
       <View style={styles.loadingContainer}>
@@ -202,7 +378,6 @@ export default function FollowersListScreen({ route }: any) {
 
   return (
     <View style={styles.container}>
-      {/* Search Bar */}
       <View style={styles.searchContainer}>
         <TextInput
           style={styles.searchInput}
@@ -214,14 +389,12 @@ export default function FollowersListScreen({ route }: any) {
         />
       </View>
 
-      {/* Error Message */}
       {error && (
         <View style={styles.errorContainer}>
           <Text style={styles.errorText}>{error}</Text>
         </View>
       )}
 
-      {/* List */}
       <FlatList
         data={rows}
         keyExtractor={(item) => item.id}
@@ -251,23 +424,71 @@ export default function FollowersListScreen({ route }: any) {
               pressed && styles.userItemPressed,
             ]}
           >
-            {/* HARD-ENFORCE the horizontal row here */}
             <View style={styles.userRow}>
-              <Image
-                source={
-                  item.avatar_url
-                    ? { uri: item.avatar_url }
-                    : require("../../assets/default-avatar.png")
-                }
-                style={styles.avatar}
-                resizeMode="cover"
-              />
+              <View style={styles.leftBlock}>
+                <Image
+                  source={
+                    item.avatar_url
+                      ? { uri: item.avatar_url }
+                      : require("../../assets/default-avatar.png")
+                  }
+                  style={styles.avatar}
+                  resizeMode="cover"
+                />
+                <Text style={styles.username}>@{item.username ?? "unknown"}</Text>
+              </View>
 
-              <Text style={styles.username}>@{item.username ?? "unknown"}</Text>
+              {/* Right side actions */}
+              {item.id === currentUserId ? null : (
+                <View style={styles.rightActions}>
+                  <Pressable
+                    onPress={() => toggleFollowFromList(item.id)}
+                    disabled={item.updating || item.removing}
+                    style={[
+                      styles.followBtn,
+                      item.isFollowing
+                        ? styles.followingBtn
+                        : styles.followBtnPrimary,
+                      (item.updating || item.removing) && { opacity: 0.6 },
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.followBtnText,
+                        item.isFollowing
+                          ? styles.followingBtnText
+                          : styles.followBtnTextPrimary,
+                      ]}
+                    >
+                      {item.updating
+                        ? "..."
+                        : item.isFollowing
+                          ? "Following"
+                          : "Follow"}
+                    </Text>
+                  </Pressable>
+
+                  {/* Only show remove button if viewing your own profile */}
+                  {userId === currentUserId && (
+                    <Pressable
+                      onPress={() => removeFollower(item.id)}
+                      disabled={item.removing}
+                      style={[
+                        styles.removeBtn,
+                        item.removing && { opacity: 0.6 },
+                      ]}
+                      hitSlop={10}
+                    >
+                      <Text style={styles.removeBtnText}>
+                        {item.removing ? "…" : "✕"}
+                      </Text>
+                    </Pressable>
+                  )}
+                </View>
+              )}
             </View>
           </Pressable>
         )}
-
       />
     </View>
   );
@@ -286,8 +507,6 @@ const styles = StyleSheet.create({
   searchContainer: {
     padding: 12,
     backgroundColor: "#fff",
-    borderBottomWidth: 1,
-    borderBottomColor: "#eee",
   },
   searchInput: {
     height: 40,
@@ -331,36 +550,84 @@ const styles = StyleSheet.create({
   userItemPressed: {
     backgroundColor: "#f5f5f5",
   },
-  avatarContainer: {
-    width: 48,
-    height: 48,
-    marginRight: 12,
-  },
-  usernameContainer: {
-    flex: 1,
-    justifyContent: "center",
-  },
-
-  userRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    minHeight: 72,
-    width: "100%",
-  },
 
   avatar: {
     width: 48,
     height: 48,
     borderRadius: 24,
-    marginRight: 12,
+  },
+
+  userRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    width: "100%",
+    justifyContent: "space-between",
+    paddingHorizontal: 26,
+    marginBottom: 12,
+  },
+
+  leftBlock: {
+    flexDirection: "row",
+    alignItems: "center",
+    flexShrink: 1,
   },
 
   username: {
     fontWeight: "600",
     fontSize: 16,
     color: "#000",
+    marginLeft: 12,
   },
 
+  rightActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+
+  followBtn: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 10,
+    borderWidth: 1,
+  },
+
+  followBtnPrimary: {
+    backgroundColor: "#111",
+    borderColor: "#111",
+  },
+
+  followingBtn: {
+    backgroundColor: "#fff",
+    borderColor: "#ddd",
+  },
+
+  followBtnText: {
+    fontWeight: "700",
+    fontSize: 13,
+  },
+
+  followBtnTextPrimary: {
+    color: "#fff",
+  },
+
+  followingBtnText: {
+    color: "#111",
+  },
+
+  removeBtn: {
+    width: 14,
+    height: 14,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#fff",
+  },
+
+  removeBtnText: {
+    fontSize: 16,
+    fontWeight: "800",
+    color: "#111",
+    lineHeight: 18,
+  },
 });

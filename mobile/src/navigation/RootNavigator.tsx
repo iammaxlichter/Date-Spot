@@ -25,6 +25,7 @@ import SearchScreen from "../screens/Search/SearchScreen";
 import FollowersListScreen from "../screens/FollowersListScreen";
 import FollowingListScreen from "../screens/FollowingListScreen";
 import UserProfileScreen from "../screens/UserProfileScreen";
+import { SpotCreationProvider, useSpotCreation } from "../contexts/SportCreationContext";
 
 export type RootStackParamList = {
   Register: undefined;
@@ -105,10 +106,12 @@ function HomeHeader({ onProfile }: { onProfile: () => void }) {
   );
 }
 
-export function RootNavigator() {
+// ✅ Inner component that uses the context
+function NavigatorContent() {
   const [session, setSession] = useState<any>(null);
   const [booting, setBooting] = useState(true);
   const [activeRoute, setActiveRoute] = useState<string>("Home");
+  const { isCreatingSpot } = useSpotCreation(); // ✅ Now inside the provider
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -134,102 +137,109 @@ export function RootNavigator() {
   }
 
   return (
-    <SafeAreaProvider>
-      <NavigationContainer
-        ref={navigationRef}
-        onStateChange={() => {
-          const route = navigationRef.getCurrentRoute();
-          if (route?.name) setActiveRoute(route.name);
-        }}
-      >
-        <View style={{ flex: 1 }}>
-          <Stack.Navigator>
-            {session ? (
-              <>
-                <Stack.Screen
-                  name="Home"
-                  component={HomeScreen}
-                  options={({ navigation }) => ({
-                    header: () => (
-                      <HomeHeader onProfile={() => navigation.navigate("Profile")} />
-                    ),
-                  })}
-                />
-                <Stack.Screen
-                  name="Profile"
-                  component={ProfileScreen}
-                  options={{
-                    title: "Profile",
-                    headerShadowVisible: false,
-                    headerBackTitle: "",
-                    headerRight: () => (
-                      <TouchableOpacity
-                        onPress={async () => {
-                          await supabase.auth.signOut();
-                        }}
-                        style={{ marginRight: 12 }}
-                      >
-                        <Text style={{ color: "red", fontWeight: "600" }}>Logout</Text>
-                      </TouchableOpacity>
-                    ),
-                  }}
-                />
-                <Stack.Screen
-                  name="UserProfile"
-                  component={UserProfileScreen}
-                  options={{ title: "Profile" }}
-                />
-                <Stack.Screen
-                  name="Search"
-                  component={SearchScreen}
-                  options={{
-                    title: "Search",
-                    headerShadowVisible: false,
-                  }}
-                />
-                <Stack.Screen
-                  name="Followers"
-                  component={FollowersListScreen}
-                  options={{ title: "Followers" }}
-                />
-                <Stack.Screen
-                  name="Following"
-                  component={FollowingListScreen}
-                  options={{ title: "Following" }}
-                />
-              </>
-            ) : (
-              <>
-                <Stack.Screen
-                  name="Login"
-                  component={LoginScreen}
-                  options={{ title: "Login" }}
-                />
-                <Stack.Screen
-                  name="Register"
-                  component={RegisterScreen}
-                  options={{ title: "Create Account" }}
-                />
-              </>
-            )}
-          </Stack.Navigator>
+    <NavigationContainer
+      ref={navigationRef}
+      onStateChange={() => {
+        const route = navigationRef.getCurrentRoute();
+        if (route?.name) setActiveRoute(route.name);
+      }}
+    >
+      <View style={{ flex: 1 }}>
+        <Stack.Navigator>
           {session ? (
-            <BottomOverlay
-              activeRoute={activeRoute}
-              onGoHome={() => {
-                if (navigationRef.isReady()) navigationRef.navigate("Home");
-              }}
-              onSearch={() => {
-                if (navigationRef.isReady()) navigationRef.navigate("Search");
-              }}
-              onGoProfile={() => {
-                if (navigationRef.isReady()) navigationRef.navigate("Profile");
-              }}
-            />
-          ) : null}
-        </View>
+            <>
+              <Stack.Screen
+                name="Home"
+                component={HomeScreen}
+                options={({ navigation }) => ({
+                  header: () => (
+                    <HomeHeader onProfile={() => navigation.navigate("Profile")} />
+                  ),
+                })}
+              />
+              <Stack.Screen
+                name="Profile"
+                component={ProfileScreen}
+                options={{
+                  title: "Profile",
+                  headerShadowVisible: false,
+                  headerBackTitle: "",
+                  headerRight: () => (
+                    <TouchableOpacity
+                      onPress={async () => {
+                        await supabase.auth.signOut();
+                      }}
+                      style={{ marginRight: 12 }}
+                    >
+                      <Text style={{ color: "red", fontWeight: "600" }}>Logout</Text>
+                    </TouchableOpacity>
+                  ),
+                }}
+              />
+              <Stack.Screen
+                name="UserProfile"
+                component={UserProfileScreen}
+                options={{ title: "Profile" }}
+              />
+              <Stack.Screen
+                name="Search"
+                component={SearchScreen}
+                options={{
+                  title: "Search",
+                  headerShadowVisible: false,
+                }}
+              />
+              <Stack.Screen
+                name="Followers"
+                component={FollowersListScreen}
+                options={{ title: "Followers" }}
+              />
+              <Stack.Screen
+                name="Following"
+                component={FollowingListScreen}
+                options={{ title: "Following" }}
+              />
+            </>
+          ) : (
+            <>
+              <Stack.Screen
+                name="Login"
+                component={LoginScreen}
+                options={{ title: "Login" }}
+              />
+              <Stack.Screen
+                name="Register"
+                component={RegisterScreen}
+                options={{ title: "Create Account" }}
+              />
+            </>
+          )}
+        </Stack.Navigator>
+        {session && !isCreatingSpot && (
+          <BottomOverlay
+            activeRoute={activeRoute}
+            onGoHome={() => {
+              if (navigationRef.isReady()) navigationRef.navigate("Home");
+            }}
+            onSearch={() => {
+              if (navigationRef.isReady()) navigationRef.navigate("Search");
+            }}
+            onGoProfile={() => {
+              if (navigationRef.isReady()) navigationRef.navigate("Profile");
+            }}
+          />
+        )}
+      </View>
+    </NavigationContainer>
+  );
+}
 
-      </NavigationContainer>
+export function RootNavigator() {
+  return (
+    <SafeAreaProvider>
+      <SpotCreationProvider>
+        <NavigatorContent />
+      </SpotCreationProvider>
     </SafeAreaProvider>
   );
 }

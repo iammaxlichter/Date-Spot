@@ -276,6 +276,7 @@ const s = StyleSheet.create({
     alignItems: "center",
     paddingTop: 48,
     paddingBottom: 120,
+    backgroundColor: "white"
   },
   avatar: { width: 120, height: 120, borderRadius: 60, marginBottom: 14 },
   name: { fontSize: 22, fontWeight: "700", marginBottom: 12 },

@@ -419,9 +419,10 @@ const styles = StyleSheet.create({
   },
 
   avatar: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    marginRight: 12,
   },
 
   userRow: {
@@ -429,8 +430,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     width: "100%",
     justifyContent: "space-between",
-    paddingHorizontal: 28,
-    marginBottom: 12
+    paddingHorizontal: 16,
+    marginBottom: 16
   },
 
   leftBlock: {

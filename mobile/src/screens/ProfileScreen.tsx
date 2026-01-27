@@ -28,6 +28,52 @@ type ProfileRow = {
   following_count: number | null;
 };
 
+type PartnershipRow = {
+  id: string;
+  user_a: string;
+  user_b: string;
+  status: "pending" | "accepted" | "declined" | "cancelled";
+  requested_by: string;
+  created_at: string;
+  responded_at: string | null;
+};
+
+type PartnerMini = {
+  id: string;
+  username: string | null;
+  avatar_url: string | null;
+  name: string | null;
+};
+
+async function getMyAcceptedPartnership(myId: string): Promise<PartnershipRow | null> {
+  const { data, error } = await supabase
+    .from("partnerships")
+    .select("id,user_a,user_b,status,requested_by,created_at,responded_at")
+    .eq("status", "accepted")
+    .or(`user_a.eq.${myId},user_b.eq.${myId}`)
+    .order("responded_at", { ascending: false })
+    .limit(1);
+
+  if (error) throw error;
+  return (data?.[0] as PartnershipRow) ?? null;
+}
+
+function otherUserId(p: PartnershipRow, me: string) {
+  return p.user_a === me ? p.user_b : p.user_a;
+}
+
+async function getPartnerMini(userId: string): Promise<PartnerMini | null> {
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("id,username,avatar_url,name")
+    .eq("id", userId)
+    .maybeSingle();
+
+  if (error) throw error;
+  return (data as PartnerMini | null) ?? null;
+}
+
+
 async function fetchCounts(userId: string) {
   const [{ count: followersCount, error: followersErr }, { count: followingCount, error: followingErr }] =
     await Promise.all([
@@ -60,6 +106,10 @@ export default function ProfileScreen() {
   const [editOpen, setEditOpen] = React.useState(false);
   const [nameDraft, setNameDraft] = React.useState("");
   const [savingName, setSavingName] = React.useState(false);
+  const [partner, setPartner] = React.useState<PartnerMini | null>(null);
+  const [partnerLoading, setPartnerLoading] = React.useState(false);
+  const [partnerMenuOpen, setPartnerMenuOpen] = React.useState(false);
+  const [removingPartner, setRemovingPartner] = React.useState(false);
 
 
   const loadProfile = React.useCallback(async (): Promise<void> => {
@@ -96,6 +146,19 @@ export default function ProfileScreen() {
       row = created as ProfileRow;
     } else {
       row = data as ProfileRow;
+    }
+    setPartnerLoading(true);
+    try {
+      const p = await getMyAcceptedPartnership(user.id);
+      if (!p) {
+        setPartner(null);
+      } else {
+        const otherId = otherUserId(p, user.id);
+        const other = await getPartnerMini(otherId);
+        setPartner(other);
+      }
+    } finally {
+      setPartnerLoading(false);
     }
 
     // Always compute counts from follows table (source of truth)
@@ -144,6 +207,94 @@ export default function ProfileScreen() {
       })();
     }, [loadProfile])
   );
+
+  const removePartner = async () => {
+    if (!partner) return;
+    if (removingPartner) return;
+
+    try {
+      setRemovingPartner(true);
+
+      const { data: userRes, error: userErr } = await supabase.auth.getUser();
+      if (userErr) throw userErr;
+
+      const me = userRes?.user?.id;
+      if (!me) throw new Error("Not authenticated");
+
+      // 1) Find the accepted partnership between us
+      const { data: pRow, error: pErr } = await supabase
+        .from("partnerships")
+        .select("id,user_a,user_b,status")
+        .eq("status", "accepted")
+        .or(
+          `and(user_a.eq.${me},user_b.eq.${partner.id}),and(user_a.eq.${partner.id},user_b.eq.${me})`
+        )
+        .maybeSingle();
+
+      if (pErr) throw pErr;
+      if (!pRow) {
+        // nothing to remove (already removed / stale UI)
+        setPartner(null);
+        setPartnerMenuOpen(false);
+        return;
+      }
+
+      // 2) Cancel it (keep history)
+      const { data: cancelledRow, error: cancelErr } = await supabase
+        .from("partnerships")
+        .update({ status: "cancelled", responded_at: new Date().toISOString() })
+        .eq("id", pRow.id)
+        .select("id,status")
+        .single();
+
+      if (cancelErr) throw cancelErr;
+
+      if (!cancelledRow || cancelledRow.status !== "cancelled") {
+        throw new Error("Partnership was not cancelled (permission / RLS issue).");
+      }
+
+      // 3) Create a feed event for BOTH users
+      const { data: meProfile, error: meProfileErr } = await supabase
+        .from("profiles")
+        .select("username")
+        .eq("id", me)
+        .maybeSingle();
+      if (meProfileErr) throw meProfileErr;
+
+      const { data: themProfile, error: themProfileErr } = await supabase
+        .from("profiles")
+        .select("username")
+        .eq("id", partner.id)
+        .maybeSingle();
+      if (themProfileErr) throw themProfileErr;
+
+      const meU = meProfile?.username ?? "unknown";
+      const themU = themProfile?.username ?? "unknown";
+
+      const message = `@${meU} removed @${themU} as their DateSpot partner.`;
+
+      const { error: eventErr } = await supabase.from("feed_events").insert([
+        { user_id: pRow.user_a, type: "partnership", ref_id: pRow.id, message },
+        { user_id: pRow.user_b, type: "partnership", ref_id: pRow.id, message },
+      ]);
+
+      if (eventErr) throw eventErr;
+
+      // 4) Update UI
+      setPartner(null);
+      setPartnerMenuOpen(false);
+
+      await loadProfile();
+    } catch (e: any) {
+      console.error(e);
+      Alert.alert("Error", e?.message ?? "Failed to remove partner.");
+    } finally {
+      setRemovingPartner(false);
+    }
+  };
+
+
+
 
   const saveName = React.useCallback(async () => {
     if (savingName) return;
@@ -301,6 +452,49 @@ export default function ProfileScreen() {
         <Text style={s.name}>{profile.name ?? "Your Name"}</Text>
       </Pressable>
 
+      <View style={{ width: "100%", paddingHorizontal: 24, marginTop: 14 }}>
+        <View style={s.partnerCard}>
+
+          {/* Header row */}
+          <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+            <Text style={s.partnerTitle}>DateSpot partner</Text>
+
+            <Pressable onPress={() => setPartnerMenuOpen(true)} hitSlop={10}>
+              <Text style={s.partnerDots}>⋯</Text>
+            </Pressable>
+          </View>
+
+          {partnerLoading ? (
+            <Text style={s.partnerBody}>Loading…</Text>
+          ) : partner ? (
+            <Pressable
+              onPress={() => navigation.navigate("UserProfile", { userId: partner.id })}
+              style={s.partnerRow}
+            >
+              <Image
+                source={
+                  partner.avatar_url
+                    ? { uri: partner.avatar_url }
+                    : require("../../assets/default-avatar.png")
+                }
+                style={s.partnerAvatar}
+              />
+
+              <Text style={s.partnerBody}>
+                You're partnered with{" "}
+                <Text style={{ fontWeight: "800" }}>
+                  @{partner.username ?? "unknown"}
+                </Text>
+              </Text>
+            </Pressable>
+          ) : (
+            <Text style={s.partnerBody}>You don’t have a DateSpot partner yet.</Text>
+          )}
+        </View>
+      </View>
+
+
+
       <View style={s.statsRow}>
         <Pressable
           style={s.statBox}
@@ -371,6 +565,35 @@ export default function ProfileScreen() {
           </View>
         </View>
       </Modal>
+
+      <Modal
+        visible={partnerMenuOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setPartnerMenuOpen(false)}
+      >
+        <View style={s.modalBackdrop}>
+          <View style={s.menuCard}>
+            {partner ? (
+              <Pressable
+                onPress={removePartner}
+                disabled={removingPartner}
+                style={[s.menuItem, removingPartner && { opacity: 0.6 }]}
+              >
+                <Text style={s.menuDanger}>
+                  {removingPartner ? "Removing..." : "Remove DateSpot partner"}
+                </Text>
+              </Pressable>
+            ) : null}
+
+            <Pressable onPress={() => setPartnerMenuOpen(false)} style={s.menuItem}>
+              <Text style={s.menuCancel}>Close</Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
+
+
 
       <View style={{ height: 80 }} />
     </ScrollView>
@@ -455,5 +678,48 @@ const s = StyleSheet.create({
   modalBtnSecondary: { backgroundColor: "#f2f2f2" },
   modalBtnTextPrimary: { color: "#fff", fontWeight: "700" },
   modalBtnTextSecondary: { color: "#111", fontWeight: "700" },
+  partnerCard: {
+    borderWidth: 1,
+    borderColor: "#eee",
+    borderRadius: 14,
+    padding: 14,
+    backgroundColor: "#fff",
+    marginBottom: 20
+  },
+  partnerTitle: { fontSize: 14, fontWeight: "800", marginBottom: 6 },
+  partnerBody: { fontSize: 13, color: "#333" },
+  partnerRow: { flexDirection: "row", alignItems: "center", gap: 10, marginTop: 6 },
+  partnerAvatar: { width: 36, height: 36, borderRadius: 18 },
+  partnerLink: { fontSize: 13, color: "#111", fontWeight: "800" },
+  partnerDots: {
+    fontSize: 22,
+    fontWeight: "800",
+    paddingHorizontal: 6,
+  },
+
+  menuCard: {
+    backgroundColor: "#fff",
+    borderRadius: 14,
+    paddingVertical: 6,
+    width: "100%",
+    maxWidth: 320,
+  },
+
+  menuItem: {
+    paddingVertical: 14,
+    paddingHorizontal: 18,
+  },
+
+  menuDanger: {
+    color: "#d11a2a",
+    fontWeight: "700",
+    fontSize: 15,
+  },
+
+  menuCancel: {
+    color: "#111",
+    fontWeight: "700",
+    fontSize: 15,
+  },
 
 });

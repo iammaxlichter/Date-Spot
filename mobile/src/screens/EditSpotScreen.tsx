@@ -1,0 +1,238 @@
+// src/screens/EditSpotScreen.tsx
+import React from "react";
+import {
+    View,
+    Text,
+    ActivityIndicator,
+    Alert,
+    Keyboard,
+    TouchableWithoutFeedback,
+} from "react-native";
+import { supabase } from "../lib/supabase";
+import { styles } from "./styles";
+import { NewSpotSheet } from "./NewSpotSheet";
+import { sanitizeOneToTenInput } from "../lib/utils/numberInputValidation";
+import type { Price, BestFor } from "../lib/types/datespot";
+import { useSpotCreation } from "../contexts/SpotCreationContext";
+
+type SpotEditRow = {
+    id: string;
+    user_id: string;
+    name: string;
+    atmosphere: string | null;
+    date_score: number | null;
+    notes: string | null;
+    vibe: string | null;
+    price: Price | null;
+    best_for: BestFor | null;
+    would_return: boolean;
+};
+
+export default function EditSpotScreen({ route, navigation }: any) {
+    const spotId: string = route.params.spotId;
+
+    const [loading, setLoading] = React.useState(true);
+    const [saving, setSaving] = React.useState(false);
+
+    const [currentUserId, setCurrentUserId] = React.useState<string | null>(null);
+
+    const { setIsEditingSpot } = useSpotCreation();
+
+    // Form state (match NewSpotSheet props)
+    const [name, setName] = React.useState("");
+    const [atmosphere, setAtmosphere] = React.useState(""); // 1-10 string
+    const [dateScore, setDateScore] = React.useState(""); // 1-10 string
+    const [notes, setNotes] = React.useState("");
+    const [vibe, setVibe] = React.useState<string | null>(null);
+    const [price, setPrice] = React.useState<Price | null>(null);
+    const [bestFor, setBestFor] = React.useState<BestFor | null>(null);
+    const [wouldReturn, setWouldReturn] = React.useState<boolean>(true);
+
+    React.useEffect(() => {
+        (async () => {
+            try {
+                const { data: userRes, error: userErr } = await supabase.auth.getUser();
+                if (userErr) throw userErr;
+                setCurrentUserId(userRes.user?.id ?? null);
+            } catch {
+                setCurrentUserId(null);
+            }
+        })();
+    }, []);
+
+    React.useEffect(() => {
+        setIsEditingSpot(true);
+
+        return () => {
+            setIsEditingSpot(false);
+        };
+    }, [setIsEditingSpot]);
+
+
+    const load = React.useCallback(async () => {
+        try {
+            setLoading(true);
+
+            const { data, error } = await supabase
+                .from("spots")
+                .select(
+                    `
+          id, user_id,
+          name, atmosphere, date_score, notes, vibe, price, best_for, would_return
+        `
+                )
+                .eq("id", spotId)
+                .single();
+
+            if (error) throw error;
+
+            const row = data as unknown as SpotEditRow;
+
+            // UI-level guard (RLS should still enforce server-side)
+            if (currentUserId && row.user_id !== currentUserId) {
+                Alert.alert("Not allowed", "You can only edit your own DateSpots.");
+                navigation.goBack();
+                return;
+            }
+
+            // Prefill (match NewSpotSheet types/shape)
+            setName(row.name ?? "");
+            setAtmosphere(
+                row.atmosphere == null ? "" : sanitizeOneToTenInput(String(row.atmosphere))
+            );
+            setDateScore(
+                row.date_score == null ? "" : sanitizeOneToTenInput(String(row.date_score))
+            );
+            setNotes(row.notes ?? "");
+            setVibe(row.vibe ?? null);
+            setPrice((row.price as Price | null) ?? null);
+            setBestFor((row.best_for as BestFor | null) ?? null);
+            setWouldReturn(!!row.would_return);
+        } catch (e: any) {
+            console.error(e);
+            Alert.alert("Error", e?.message ?? "Failed to load DateSpot.");
+            navigation.goBack();
+        } finally {
+            setLoading(false);
+        }
+    }, [currentUserId, navigation, spotId]);
+
+    React.useEffect(() => {
+        void load();
+    }, [load]);
+
+    const onSave = React.useCallback(async () => {
+        const trimmedName = name.trim();
+        if (!trimmedName) {
+            Alert.alert("Missing name", "Please enter a spot name.");
+            return;
+        }
+
+        // Convert form strings -> DB values
+        const atmosphereNum =
+            atmosphere.trim() === "" ? null : Number(atmosphere.trim());
+        const dateScoreNum =
+            dateScore.trim() === "" ? null : Number(dateScore.trim());
+
+        if (
+            atmosphereNum !== null &&
+            (Number.isNaN(atmosphereNum) || atmosphereNum < 1 || atmosphereNum > 10)
+        ) {
+            Alert.alert("Invalid atmosphere", "Use a number from 1 to 10 (or leave blank).");
+            return;
+        }
+
+        if (
+            dateScoreNum !== null &&
+            (Number.isNaN(dateScoreNum) || dateScoreNum < 1 || dateScoreNum > 10)
+        ) {
+            Alert.alert("Invalid date score", "Use a number from 1 to 10 (or leave blank).");
+            return;
+        }
+
+        try {
+            setSaving(true);
+
+            const payload = {
+                name: trimmedName,
+                atmosphere: atmosphereNum === null ? null : String(atmosphereNum), // keep if your DB column is text
+                date_score: dateScoreNum,
+                notes: notes.trim() || null,
+                vibe: vibe ?? null,
+                price: price ?? null,
+                best_for: bestFor ?? null,
+                would_return: !!wouldReturn,
+            };
+
+            const { error } = await supabase.from("spots").update(payload).eq("id", spotId);
+            if (error) throw error;
+
+            Alert.alert("Saved", "Your DateSpot was updated.");
+            navigation.goBack();
+        } catch (e: any) {
+            console.error(e);
+            Alert.alert("Error", e?.message ?? "Failed to save changes.");
+        } finally {
+            setSaving(false);
+        }
+    }, [
+        atmosphere,
+        bestFor,
+        dateScore,
+        name,
+        navigation,
+        notes,
+        price,
+        spotId,
+        vibe,
+        wouldReturn,
+    ]);
+
+    const onCancel = React.useCallback(() => {
+        navigation.goBack();
+    }, [navigation]);
+
+    if (loading) {
+        return (
+            <View style={[styles.bottomSheet, { justifyContent: "center", alignItems: "center" }]}>
+                <ActivityIndicator size="large" />
+                <Text style={{ marginTop: 10 }}>Loading…</Text>
+            </View>
+        );
+    }
+
+    return (
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+            <View style={styles.bottomSheet}>
+                {saving ? (
+                    <View style={{ padding: 16, alignItems: "center" }}>
+                        <ActivityIndicator size="large" />
+                        <Text style={{ marginTop: 10 }}>Saving…</Text>
+                    </View>
+                ) : null}
+
+                <NewSpotSheet
+                    name={name}
+                    atmosphere={atmosphere}
+                    dateScore={dateScore}
+                    notes={notes}
+                    vibe={vibe}
+                    price={price}
+                    bestFor={bestFor}
+                    wouldReturn={wouldReturn}
+                    title="Edit Date Spot"
+                    onChangeName={setName}
+                    onChangeAtmosphere={(v) => setAtmosphere(sanitizeOneToTenInput(v))}
+                    onChangeDateScore={(v) => setDateScore(sanitizeOneToTenInput(v))}
+                    onChangeNotes={setNotes}
+                    onChangeVibe={setVibe}
+                    onChangePrice={setPrice}
+                    onChangeBestFor={setBestFor}
+                    onChangeWouldReturn={setWouldReturn}
+                    onCancel={onCancel}
+                    onSave={onSave}
+                />
+            </View>
+        </TouchableWithoutFeedback>
+    );
+}

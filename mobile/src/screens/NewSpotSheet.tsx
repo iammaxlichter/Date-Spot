@@ -25,6 +25,8 @@ type Props = {
   bestFor: BestFor | null;
   wouldReturn: boolean;
 
+  title?: string;
+
   onChangeName: (v: string) => void;
   onChangeAtmosphere: (v: string) => void;
   onChangeDateScore: (v: string) => void;
@@ -81,6 +83,7 @@ export function NewSpotSheet({
   price,
   bestFor,
   wouldReturn,
+  title,
   onChangeName,
   onChangeAtmosphere,
   onChangeDateScore,
@@ -124,7 +127,7 @@ export function NewSpotSheet({
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{ paddingBottom: 24 }}
         >
-          <Text style={styles.sheetTitle}>New Date Spot</Text>
+          <Text style={styles.sheetTitle}>{title ?? "New Date Spot"}</Text>
 
           <Text style={styles.label}>Name</Text>
           <TextInput

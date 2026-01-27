@@ -27,6 +27,8 @@ import FollowingListScreen from "../screens/FollowingListScreen";
 import UserProfileScreen from "../screens/UserProfileScreen";
 import { SpotCreationProvider, useSpotCreation } from "../contexts/SpotCreationContext";
 import FeedScreen from "../screens/Feed/FeedScreen";
+import SpotDetailsScreen from "../screens/SpotDetailsScreen";
+import EditSpotScreen from "../screens/EditSpotScreen";
 
 export type RootStackParamList = {
   Register: undefined;
@@ -38,6 +40,8 @@ export type RootStackParamList = {
   Followers: { userId: string };
   Following: { userId: string };
   UserProfile: { userId: string };
+  SpotDetails: { spotId: string };
+  EditSpot: { spotId: string }; 
 };
 
 
@@ -112,7 +116,7 @@ function NavigatorContent() {
   const [session, setSession] = useState<any>(null);
   const [booting, setBooting] = useState(true);
   const [activeRoute, setActiveRoute] = useState<string>("Feed");
-  const { isCreatingSpot } = useSpotCreation();
+  const { isCreatingSpot, isEditingSpot } = useSpotCreation();
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -209,7 +213,21 @@ function NavigatorContent() {
                   headerShadowVisible: false,
                 }}
               />
-
+              <Stack.Screen
+                name="SpotDetails"
+                component={SpotDetailsScreen}
+                options={{
+                  title: "DateSpot",
+                  headerShadowVisible: false
+                }}
+              />
+              <Stack.Screen
+                name="EditSpot"
+                component={EditSpotScreen}
+                options={{ 
+                  title: "Edit DateSpot",
+                  headerShadowVisible: false }}
+              />
             </>
           ) : (
             <>
@@ -226,7 +244,7 @@ function NavigatorContent() {
             </>
           )}
         </Stack.Navigator>
-        {session && !isCreatingSpot && (
+        {session && !isCreatingSpot && !isEditingSpot && (
           <BottomOverlay
             activeRoute={activeRoute}
             onGoHome={() => {

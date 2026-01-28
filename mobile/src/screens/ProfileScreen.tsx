@@ -11,7 +11,7 @@ import {
   ImageSourcePropType,
   ScrollView,
   RefreshControl,
-  TextInput
+  TextInput,
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import { supabase } from "../lib/supabase";
@@ -45,6 +45,20 @@ type PartnerMini = {
   name: string | null;
 };
 
+type SpotRow = {
+  id: string;
+  created_at: string;
+  user_id: string;
+  name: string;
+  atmosphere: string | null;
+  date_score: number | null;
+  notes: string | null;
+  vibe: string | null;
+  price: string | null;
+  best_for: string | null;
+  would_return: boolean;
+};
+
 async function getMyAcceptedPartnership(myId: string): Promise<PartnershipRow | null> {
   const { data, error } = await supabase
     .from("partnerships")
@@ -53,7 +67,6 @@ async function getMyAcceptedPartnership(myId: string): Promise<PartnershipRow | 
     .or(`user_a.eq.${myId},user_b.eq.${myId}`)
     .order("responded_at", { ascending: false })
     .limit(1);
-
   if (error) throw error;
   return (data?.[0] as PartnershipRow) ?? null;
 }
@@ -68,37 +81,62 @@ async function getPartnerMini(userId: string): Promise<PartnerMini | null> {
     .select("id,username,avatar_url,name")
     .eq("id", userId)
     .maybeSingle();
-
   if (error) throw error;
   return (data as PartnerMini | null) ?? null;
 }
 
-
 async function fetchCounts(userId: string) {
-  const [{ count: followersCount, error: followersErr }, { count: followingCount, error: followingErr }] =
-    await Promise.all([
-      supabase
-        .from("follows")
-        .select("follower_id", { count: "exact", head: true })
-        .eq("following_id", userId),
-      supabase
-        .from("follows")
-        .select("following_id", { count: "exact", head: true })
-        .eq("follower_id", userId),
-    ]);
-
+  const [
+    { count: followersCount, error: followersErr },
+    { count: followingCount, error: followingErr },
+  ] = await Promise.all([
+    supabase
+      .from("follows")
+      .select("follower_id", { count: "exact", head: true })
+      .eq("following_id", userId),
+    supabase
+      .from("follows")
+      .select("following_id", { count: "exact", head: true })
+      .eq("follower_id", userId),
+  ]);
   if (followersErr) throw followersErr;
   if (followingErr) throw followingErr;
-
   return {
     followers_count: followersCount ?? 0,
     following_count: followingCount ?? 0,
   };
 }
 
+async function fetchUserSpots(userId: string): Promise<SpotRow[]> {
+  const { data, error } = await supabase
+    .from("spots")
+    .select(
+      "id,created_at,user_id,name,atmosphere,date_score,notes,vibe,price,best_for,would_return"
+    )
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false })
+    .limit(50);
+  if (error) {
+    console.error("Error fetching spots:", error);
+    throw error;
+  }
+  return (data as SpotRow[]) ?? [];
+}
+
+function timeAgo(iso: string) {
+  const t = new Date(iso).getTime();
+  const s = Math.max(0, Math.floor((Date.now() - t) / 1000));
+  if (s < 60) return `${s}s`;
+  const m = Math.floor(s / 60);
+  if (m < 60) return `${m}m`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h`;
+  const d = Math.floor(h / 24);
+  return `${d}d`;
+}
+
 export default function ProfileScreen() {
   const navigation = useNavigation<any>();
-
   const [loading, setLoading] = React.useState(true);
   const [refreshing, setRefreshing] = React.useState(false);
   const [uploading, setUploading] = React.useState(false);
@@ -110,7 +148,8 @@ export default function ProfileScreen() {
   const [partnerLoading, setPartnerLoading] = React.useState(false);
   const [partnerMenuOpen, setPartnerMenuOpen] = React.useState(false);
   const [removingPartner, setRemovingPartner] = React.useState(false);
-
+  const [spots, setSpots] = React.useState<SpotRow[]>([]);
+  const [spotsLoading, setSpotsLoading] = React.useState(false);
 
   const loadProfile = React.useCallback(async (): Promise<void> => {
     const { data: userRes, error: userErr } = await supabase.auth.getUser();
@@ -127,7 +166,6 @@ export default function ProfileScreen() {
     if (error) throw error;
 
     let row: ProfileRow;
-
     if (!data) {
       const { data: created, error: createErr } = await supabase
         .from("profiles")
@@ -141,12 +179,12 @@ export default function ProfileScreen() {
         })
         .select("id,name,username,avatar_url,followers_count,following_count")
         .single();
-
       if (createErr) throw createErr;
       row = created as ProfileRow;
     } else {
       row = data as ProfileRow;
     }
+
     setPartnerLoading(true);
     try {
       const p = await getMyAcceptedPartnership(user.id);
@@ -163,7 +201,6 @@ export default function ProfileScreen() {
 
     // Always compute counts from follows table (source of truth)
     const counts = await fetchCounts(user.id);
-
     const merged: ProfileRow = {
       ...row,
       followers_count: counts.followers_count,
@@ -171,11 +208,19 @@ export default function ProfileScreen() {
     };
     setProfile(merged);
 
+    // Load user's spots
+    setSpotsLoading(true);
+    try {
+      const userSpots = await fetchUserSpots(user.id);
+      setSpots(userSpots);
+    } catch (e) {
+      console.error("Failed to load spots:", e);
+    } finally {
+      setSpotsLoading(false);
+    }
+
     // Optional: keep profile counters in sync in DB (don't block UI)
-    void supabase
-      .from("profiles")
-      .update(counts)
-      .eq("id", user.id);
+    void supabase.from("profiles").update(counts).eq("id", user.id);
   }, []);
 
   // Initial load
@@ -196,8 +241,6 @@ export default function ProfileScreen() {
   // Refresh whenever screen comes into focus
   useFocusEffect(
     React.useCallback(() => {
-      // NOTE: some setups type this as PromiseLike<void> (no .catch),
-      // so use an async IIFE instead.
       void (async () => {
         try {
           await loadProfile();
@@ -211,13 +254,10 @@ export default function ProfileScreen() {
   const removePartner = async () => {
     if (!partner) return;
     if (removingPartner) return;
-
     try {
       setRemovingPartner(true);
-
       const { data: userRes, error: userErr } = await supabase.auth.getUser();
       if (userErr) throw userErr;
-
       const me = userRes?.user?.id;
       if (!me) throw new Error("Not authenticated");
 
@@ -242,13 +282,15 @@ export default function ProfileScreen() {
       // 2) Cancel it (keep history)
       const { data: cancelledRow, error: cancelErr } = await supabase
         .from("partnerships")
-        .update({ status: "cancelled", responded_at: new Date().toISOString() })
+        .update({
+          status: "cancelled",
+          responded_at: new Date().toISOString(),
+        })
         .eq("id", pRow.id)
         .select("id,status")
         .single();
 
       if (cancelErr) throw cancelErr;
-
       if (!cancelledRow || cancelledRow.status !== "cancelled") {
         throw new Error("Partnership was not cancelled (permission / RLS issue).");
       }
@@ -259,6 +301,7 @@ export default function ProfileScreen() {
         .select("username")
         .eq("id", me)
         .maybeSingle();
+
       if (meProfileErr) throw meProfileErr;
 
       const { data: themProfile, error: themProfileErr } = await supabase
@@ -266,11 +309,11 @@ export default function ProfileScreen() {
         .select("username")
         .eq("id", partner.id)
         .maybeSingle();
+
       if (themProfileErr) throw themProfileErr;
 
       const meU = meProfile?.username ?? "unknown";
       const themU = themProfile?.username ?? "unknown";
-
       const message = `@${meU} removed @${themU} as their DateSpot partner.`;
 
       const { error: eventErr } = await supabase.from("feed_events").insert([
@@ -283,7 +326,6 @@ export default function ProfileScreen() {
       // 4) Update UI
       setPartner(null);
       setPartnerMenuOpen(false);
-
       await loadProfile();
     } catch (e: any) {
       console.error(e);
@@ -293,21 +335,15 @@ export default function ProfileScreen() {
     }
   };
 
-
-
-
   const saveName = React.useCallback(async () => {
     if (savingName) return;
-
     try {
       const next = nameDraft.trim();
       if (!next) {
         Alert.alert("Name required", "Please enter a name.");
         return;
       }
-
       setSavingName(true);
-
       const { data: userRes, error: userErr } = await supabase.auth.getUser();
       if (userErr) throw userErr;
       const user = userRes.user;
@@ -325,13 +361,12 @@ export default function ProfileScreen() {
       setProfile((p) =>
         p
           ? {
-            ...(updated as ProfileRow),
-            followers_count: p.followers_count,
-            following_count: p.following_count,
-          }
+              ...(updated as ProfileRow),
+              followers_count: p.followers_count,
+              following_count: p.following_count,
+            }
           : (updated as ProfileRow)
       );
-
       setEditOpen(false);
     } catch (e: any) {
       console.error(e);
@@ -340,7 +375,6 @@ export default function ProfileScreen() {
       setSavingName(false);
     }
   }, [nameDraft, savingName]);
-
 
   const onRefresh = React.useCallback(async () => {
     try {
@@ -356,7 +390,6 @@ export default function ProfileScreen() {
   const pickAndUploadAvatar = async () => {
     try {
       setUploading(true);
-
       const { data: userRes, error: userErr } = await supabase.auth.getUser();
       if (userErr) throw userErr;
       const user = userRes.user;
@@ -376,7 +409,6 @@ export default function ProfileScreen() {
       });
 
       if (result.canceled) return;
-
       const asset = result.assets[0];
 
       const { publicUrl } = await uploadProfilePicture({
@@ -395,7 +427,6 @@ export default function ProfileScreen() {
       if (updateErr) throw updateErr;
 
       const counts = await fetchCounts(user.id);
-
       setProfile({
         ...(updated as ProfileRow),
         followers_count: counts.followers_count,
@@ -426,9 +457,7 @@ export default function ProfileScreen() {
   return (
     <ScrollView
       contentContainerStyle={s.container}
-      refreshControl={
-        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-      }
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
     >
       <Pressable onPress={pickAndUploadAvatar} disabled={uploading}>
         <Image source={avatarSource} style={s.avatar} />
@@ -452,13 +481,34 @@ export default function ProfileScreen() {
         <Text style={s.name}>{profile.name ?? "Your Name"}</Text>
       </Pressable>
 
-      <View style={{ width: "100%", paddingHorizontal: 24, marginTop: 14 }}>
+      <View style={s.statsRow}>
+        <Pressable
+          style={s.statBox}
+          onPress={() => navigation.navigate("Followers", { userId: profile.id })}
+        >
+          <Text style={s.statNumber}>{profile.followers_count ?? 0}</Text>
+          <Text style={s.statLabel}>Followers</Text>
+        </Pressable>
+        <Pressable
+          style={s.statBox}
+          onPress={() => navigation.navigate("Following", { userId: profile.id })}
+        >
+          <Text style={s.statNumber}>{profile.following_count ?? 0}</Text>
+          <Text style={s.statLabel}>Following</Text>
+        </Pressable>
+      </View>
+
+      <View style={{ width: "100%", paddingHorizontal: 24, marginTop: 24 }}>
         <View style={s.partnerCard}>
-
           {/* Header row */}
-          <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+          <View
+            style={{
+              flexDirection: "row",
+              justifyContent: "space-between",
+              alignItems: "center",
+            }}
+          >
             <Text style={s.partnerTitle}>DateSpot partner</Text>
-
             <Pressable onPress={() => setPartnerMenuOpen(true)} hitSlop={10}>
               <Text style={s.partnerDots}>⋯</Text>
             </Pressable>
@@ -479,38 +529,68 @@ export default function ProfileScreen() {
                 }
                 style={s.partnerAvatar}
               />
-
               <Text style={s.partnerBody}>
                 You're partnered with{" "}
-                <Text style={{ fontWeight: "800" }}>
-                  @{partner.username ?? "unknown"}
-                </Text>
+                <Text style={{ fontWeight: "800" }}>@{partner.username ?? "unknown"}</Text>
               </Text>
             </Pressable>
           ) : (
-            <Text style={s.partnerBody}>You don’t have a DateSpot partner yet.</Text>
+            <Text style={s.partnerBody}>You don't have a DateSpot partner yet.</Text>
           )}
         </View>
       </View>
 
+      {/* Your Date Spots Section */}
+      <View style={{ width: "100%", paddingHorizontal: 24, marginTop: 12 }}>
+        <Text style={s.sectionTitle}>Your Date Spots</Text>
 
+        {(() => {
+            return null;
+        })()}
 
-      <View style={s.statsRow}>
-        <Pressable
-          style={s.statBox}
-          onPress={() => navigation.navigate("Followers", { userId: profile.id })}
-        >
-          <Text style={s.statNumber}>{profile.followers_count ?? 0}</Text>
-          <Text style={s.statLabel}>Followers</Text>
-        </Pressable>
+        {spotsLoading ? (
+          <View style={s.spotsLoadingContainer}>
+            <ActivityIndicator size="small" />
+            <Text style={s.spotsLoadingText}>Loading spots…</Text>
+          </View>
+        ) : spots.length > 0 ? (
+          spots.map((spot) => (
+            <Pressable
+              key={spot.id}
+              onPress={() => navigation.navigate("SpotDetails", { spotId: spot.id })}
+              style={s.spotCard}
+            >
+              <View style={s.spotHeader}>
+                <Text style={s.spotName}>{spot.name}</Text>
+                <Text style={s.spotTime}>{timeAgo(spot.created_at)} ago</Text>
+              </View>
 
-        <Pressable
-          style={s.statBox}
-          onPress={() => navigation.navigate("Following", { userId: profile.id })}
-        >
-          <Text style={s.statNumber}>{profile.following_count ?? 0}</Text>
-          <Text style={s.statLabel}>Following</Text>
-        </Pressable>
+              <View style={s.spotMetrics}>
+                <Text style={s.spotMetric}>
+                  Atmosphere: {spot.atmosphere ?? "—"}
+                </Text>
+                <Text style={s.spotMetric}>
+                  Date score: {spot.date_score ?? "—"}
+                </Text>
+              </View>
+
+              <View style={s.spotMeta}>
+                {spot.vibe ? <Text style={s.spotPill}>{spot.vibe}</Text> : null}
+                {spot.price ? <Text style={s.spotPill}>{spot.price}</Text> : null}
+                {spot.best_for ? <Text style={s.spotPill}>{spot.best_for}</Text> : null}
+                <Text style={[s.spotPill, spot.would_return ? s.pillYes : s.pillNo]}>
+                  {spot.would_return ? "Would return" : "Would not return"}
+                </Text>
+              </View>
+            </Pressable>
+          ))
+        ) : (
+          <View style={s.emptySpots}>
+            <Text style={s.emptySpotsText}>
+              You haven't created any date spots yet.
+            </Text>
+          </View>
+        )}
       </View>
 
       <Modal
@@ -522,7 +602,6 @@ export default function ProfileScreen() {
         <View style={s.modalBackdrop}>
           <View style={s.modalCard}>
             <Text style={s.modalTitle}>Edit name</Text>
-
             <TextInput
               value={nameDraft}
               onChangeText={setNameDraft}
@@ -532,35 +611,23 @@ export default function ProfileScreen() {
               autoCorrect={false}
               maxLength={40}
             />
-
             <View style={s.modalButtons}>
               <Pressable
                 onPress={() => setEditOpen(false)}
                 disabled={savingName}
-                style={[
-                  s.modalBtn,
-                  s.modalBtnSecondary,
-                  savingName && { opacity: 0.6 },
-                ]}
+                style={[s.modalBtn, s.modalBtnSecondary, savingName && { opacity: 0.6 }]}
               >
                 <Text style={s.modalBtnTextSecondary}>Cancel</Text>
               </Pressable>
-
-
               <Pressable
                 onPress={saveName}
                 disabled={savingName}
-                style={[
-                  s.modalBtn,
-                  s.modalBtnPrimary,
-                  savingName && { opacity: 0.6 },
-                ]}
+                style={[s.modalBtn, s.modalBtnPrimary, savingName && { opacity: 0.6 }]}
               >
                 <Text style={s.modalBtnTextPrimary}>
                   {savingName ? "Saving..." : "Save"}
                 </Text>
               </Pressable>
-
             </View>
           </View>
         </View>
@@ -585,15 +652,12 @@ export default function ProfileScreen() {
                 </Text>
               </Pressable>
             ) : null}
-
             <Pressable onPress={() => setPartnerMenuOpen(false)} style={s.menuItem}>
               <Text style={s.menuCancel}>Close</Text>
             </Pressable>
           </View>
         </View>
       </Modal>
-
-
 
       <View style={{ height: 80 }} />
     </ScrollView>
@@ -606,7 +670,7 @@ const s = StyleSheet.create({
     alignItems: "center",
     paddingTop: 48,
     paddingBottom: 120,
-    backgroundColor: "white"
+    backgroundColor: "white",
   },
   avatar: { width: 120, height: 120, borderRadius: 60, marginBottom: 14 },
   avatarOverlay: {
@@ -649,11 +713,7 @@ const s = StyleSheet.create({
     borderRadius: 14,
     padding: 16,
   },
-  modalTitle: {
-    fontSize: 16,
-    fontWeight: "700",
-    marginBottom: 10,
-  },
+  modalTitle: { fontSize: 16, fontWeight: "700", marginBottom: 10 },
   modalInput: {
     height: 44,
     borderWidth: 1,
@@ -669,11 +729,7 @@ const s = StyleSheet.create({
     gap: 10,
     marginTop: 14,
   },
-  modalBtn: {
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 10,
-  },
+  modalBtn: { paddingHorizontal: 14, paddingVertical: 10, borderRadius: 10 },
   modalBtnPrimary: { backgroundColor: "#111" },
   modalBtnSecondary: { backgroundColor: "#f2f2f2" },
   modalBtnTextPrimary: { color: "#fff", fontWeight: "700" },
@@ -684,19 +740,14 @@ const s = StyleSheet.create({
     borderRadius: 14,
     padding: 14,
     backgroundColor: "#fff",
-    marginBottom: 20
+    marginBottom: 20,
   },
   partnerTitle: { fontSize: 14, fontWeight: "800", marginBottom: 6 },
   partnerBody: { fontSize: 13, color: "#333" },
   partnerRow: { flexDirection: "row", alignItems: "center", gap: 10, marginTop: 6 },
   partnerAvatar: { width: 36, height: 36, borderRadius: 18 },
   partnerLink: { fontSize: 13, color: "#111", fontWeight: "800" },
-  partnerDots: {
-    fontSize: 22,
-    fontWeight: "800",
-    paddingHorizontal: 6,
-  },
-
+  partnerDots: { fontSize: 22, fontWeight: "800", paddingHorizontal: 6 },
   menuCard: {
     backgroundColor: "#fff",
     borderRadius: 14,
@@ -704,22 +755,90 @@ const s = StyleSheet.create({
     width: "100%",
     maxWidth: 320,
   },
-
-  menuItem: {
-    paddingVertical: 14,
-    paddingHorizontal: 18,
-  },
-
-  menuDanger: {
-    color: "#d11a2a",
-    fontWeight: "700",
-    fontSize: 15,
-  },
-
-  menuCancel: {
+  menuItem: { paddingVertical: 14, paddingHorizontal: 18 },
+  menuDanger: { color: "#d11a2a", fontWeight: "700", fontSize: 15 },
+  menuCancel: { color: "#111", fontWeight: "700", fontSize: 15 },
+  // Date Spots Section Styles
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: "800",
+    marginBottom: 14,
     color: "#111",
-    fontWeight: "700",
-    fontSize: 15,
   },
-
+  spotsLoadingContainer: {
+    alignItems: "center",
+    paddingVertical: 24,
+  },
+  spotsLoadingText: {
+    fontSize: 13,
+    color: "#666",
+    marginTop: 8,
+  },
+  spotCard: {
+    borderWidth: 1,
+    borderColor: "#eee",
+    borderRadius: 14,
+    padding: 14,
+    marginBottom: 12,
+    backgroundColor: "#fff",
+  },
+  spotHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    marginBottom: 10,
+  },
+  spotName: {
+    fontSize: 16,
+    fontWeight: "800",
+    color: "#111",
+    flex: 1,
+    marginRight: 10,
+  },
+  spotTime: {
+    fontSize: 12,
+    color: "#777",
+  },
+  spotMetrics: {
+    flexDirection: "row",
+    gap: 14,
+    marginBottom: 10,
+  },
+  spotMetric: {
+    fontSize: 13,
+    color: "#333",
+  },
+  spotMeta: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  spotPill: {
+    borderWidth: 1,
+    borderColor: "#eee",
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 999,
+    fontSize: 12,
+    color: "#111",
+    backgroundColor: "#fafafa",
+  },
+  pillYes: {
+    backgroundColor: "#f2fff7",
+    borderColor: "#d6ffe6",
+  },
+  pillNo: {
+    backgroundColor: "#fff6f6",
+    borderColor: "#ffe0e0",
+  },
+  emptySpots: {
+    alignItems: "center",
+    paddingVertical: 40,
+    paddingHorizontal: 20,
+  },
+  emptySpotsText: {
+    fontSize: 13,
+    color: "#666",
+    textAlign: "center",
+  },
 });

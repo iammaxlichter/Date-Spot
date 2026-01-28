@@ -158,6 +158,7 @@ function NavigatorContent() {
                 component={FeedScreen}
                 options={({ navigation }) => ({
                   headerShown: true,
+                  headerShadowVisible: false,
                   header: () => (
                     <FeedHeader onProfile={() => navigation.navigate("Profile")} />
                   ),
@@ -186,7 +187,10 @@ function NavigatorContent() {
               <Stack.Screen
                 name="UserProfile"
                 component={UserProfileScreen}
-                options={{ title: "Profile" }}
+                options={{ 
+                  title: "Profile",
+                  headerShadowVisible: false,
+                 }}
               />
               <Stack.Screen
                 name="Search"
@@ -234,12 +238,18 @@ function NavigatorContent() {
               <Stack.Screen
                 name="Login"
                 component={LoginScreen}
-                options={{ title: "Login" }}
+                options={{ 
+                  title: "Login",
+                  headerShadowVisible: false
+                 }}
               />
               <Stack.Screen
                 name="Register"
                 component={RegisterScreen}
-                options={{ title: "Create Account" }}
+                options={{ 
+                  title: "Create Account",
+                  headerShadowVisible: false
+                 }}
               />
             </>
           )}

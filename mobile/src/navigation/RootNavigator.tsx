@@ -12,10 +12,10 @@ import {
 } from "react-native";
 import { SafeAreaProvider, useSafeAreaInsets } from "react-native-safe-area-context";
 
-import RegisterScreen from "../screens/RegisterScreen";
-import LoginScreen from "../screens/LoginScreen";
+import RegisterScreen from "../screens/Register/RegisterScreen";
+import LoginScreen from "../screens/Login/LoginScreen";
 import MapScreen from "../screens/Map/MapScreen";
-import ProfileScreen from "../screens/ProfileScreen";
+import ProfileScreen from "../screens/Profile/ProfileScreen";
 import { supabase } from "../lib/supabase";
 import {
   createNavigationContainerRef,
@@ -24,11 +24,11 @@ import { BottomOverlay } from "./BottomOverlay";
 import SearchScreen from "../screens/Search/SearchScreen";
 import FollowersListScreen from "../screens/FollowersListScreen";
 import FollowingListScreen from "../screens/FollowingListScreen";
-import UserProfileScreen from "../screens/UserProfileScreen";
+import UserProfileScreen from "../screens/UserProfileScreen/UserProfileScreen";
 import { SpotCreationProvider, useSpotCreation } from "../contexts/SpotCreationContext";
 import FeedScreen from "../screens/Feed/FeedScreen";
-import SpotDetailsScreen from "../screens/SpotDetailsScreen";
-import EditSpotScreen from "../screens/EditSpotScreen";
+import SpotDetailsScreen from "../screens/SpotDetails/SpotDetailsScreen";
+import EditSpotScreen from "../screens/EditSpot/EditSpotScreen";
 
 export type RootStackParamList = {
   Register: undefined;

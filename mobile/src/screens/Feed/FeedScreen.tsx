@@ -12,9 +12,9 @@ import {
   Alert,
 } from "react-native";
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
-import { supabase } from "../../lib/supabase";
+import { supabase } from "../../services/supabase/client";
 import { PendingPartnerBanner } from "./components/PendingPartnerBanner";
-import { PartnershipRow } from "../../lib/partnerships";
+import { PartnershipRow } from "../../services/api/partnerships";
 
 type ProfileMini = {
   id: string;

@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import type { Region } from "react-native-maps";
 import { DEFAULT_AUTOCOMPLETE_RADIUS } from "../constants";
 import type { GooglePrediction } from "../types";
-import { fetchAutocomplete } from "../../../lib/google/places";
+import { fetchAutocomplete } from "../../../services/google/places";
 
 export function usePlacesAutocomplete(params: {
   region: Region | null;

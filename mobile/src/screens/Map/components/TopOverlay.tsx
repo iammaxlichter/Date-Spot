@@ -1,9 +1,9 @@
 // src/screens/components/TopOverlay.tsx
 import React from "react";
 import { View, Text, TouchableOpacity, TextInput, Keyboard } from "react-native";
-import type { Place } from "../../../lib/api/places";
+import type { Spot } from "../../../services/api/spots";
 import type { GooglePrediction } from "../types";
-import { styles } from "../../styles";
+import { styles } from "../styles";
 import { SuggestionsDropdown } from "./SuggestionsDropdown";
 
 export function TopOverlay(props: {
@@ -11,10 +11,10 @@ export function TopOverlay(props: {
   onChangeSearch: (text: string) => void;
   onSubmitSearch: () => void;
   showSuggestions: boolean;
-  localMatches: Place[];
+  localMatches: Spot[];
   googleResults: GooglePrediction[];
   searching: boolean;
-  onSelectSaved: (spot: Place) => void;
+  onSelectSaved: (spot: Spot) => void;
   onSelectGoogle: (prediction: GooglePrediction) => void;
   onAddSpot: () => void;
 }) {

@@ -1,16 +1,16 @@
 // src/screens/components/SuggestionsDropdown.tsx
 import React from "react";
 import { View, Text, TouchableOpacity, ScrollView } from "react-native";
-import type { Place } from "../../../lib/api/places";
+import type { Spot } from "../../../services/api/spots";
 import type { GooglePrediction } from "../types";
-import { styles } from "../../styles";
+import { styles } from "../styles";
 
 export function SuggestionsDropdown(props: {
   visible: boolean;
-  localMatches: Place[];
+  localMatches: Spot[];
   googleResults: GooglePrediction[];
   searching: boolean;
-  onSelectSaved: (spot: Place) => void;
+  onSelectSaved: (spot: Spot) => void;
   onSelectGoogle: (prediction: GooglePrediction) => void;
 }) {
   const {

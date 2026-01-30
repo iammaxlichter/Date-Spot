@@ -1,8 +1,8 @@
 // src/screens/Feed/components/PendingPartnerBanner.tsx
 import React from "react";
 import { View, Text, Pressable, StyleSheet, Alert, ActivityIndicator, LayoutAnimation, Platform, UIManager } from "react-native";
-import { acceptRequest, declineRequest, PartnershipRow, getAcceptedPartnershipForUser } from "../../../lib/partnerships";
-import { supabase } from "../../../lib/supabase";
+import { acceptRequest, declineRequest, PartnershipRow, getAcceptedPartnershipForUser } from "../../../services/api/partnerships";
+import { supabase } from "../../../services/supabase/client";
 
 type Props = {
   me: string;

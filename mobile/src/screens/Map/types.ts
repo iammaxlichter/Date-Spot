@@ -1,5 +1,5 @@
 // src/screens/Home/types.ts
-import type { Price, BestFor } from "../../lib/types/datespot";
+import type { Price, BestFor } from "../../types/datespot";
 
 export type GooglePrediction = {
   description: string;

@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
-import { supabase } from "../../../lib/supabase";
+import { supabase } from "../../../services/supabase/client";
 
 export function useProfileAvatar() {
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);

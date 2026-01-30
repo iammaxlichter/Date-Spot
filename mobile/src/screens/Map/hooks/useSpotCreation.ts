@@ -2,7 +2,7 @@
 import { useMemo, useState } from "react";
 import type { Region } from "react-native-maps";
 import { Alert } from "react-native";
-import { supabase } from "../../../lib/supabase";
+import { supabase } from "../../../services/supabase/client";
 import type { Coords, NewSpotDraft } from "../types";
 
 function makeEmptyDraft(coords: Coords | null): NewSpotDraft {

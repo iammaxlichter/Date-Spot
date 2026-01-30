@@ -1,9 +1,9 @@
 // src/screens/EditSpot/hooks/useEditSpot.ts
 import * as React from "react";
 import { Alert } from "react-native";
-import { supabase } from "../../../lib/supabase";
-import { sanitizeOneToTenInput } from "../../../lib/utils/numberInputValidation";
-import type { Price, BestFor } from "../../../lib/types/datespot";
+import { supabase } from "../../../services/supabase/client";
+import { sanitizeOneToTenInput } from "../../../app/utils/numberInputValidation";
+import type { Price, BestFor } from "../../../types/datespot";
 import type { SpotEditRow } from "../types";
 
 export function useEditSpot(args: {

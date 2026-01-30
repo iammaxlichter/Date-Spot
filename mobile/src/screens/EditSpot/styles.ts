@@ -1,2 +1,2 @@
 // src/screens/EditSpot/styles.ts
-export { styles } from "../styles";
+export { styles } from "../NewSpotSheet/styles";

@@ -3,8 +3,8 @@ import { View, Alert, ScrollView, RefreshControl, ActivityIndicator } from "reac
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import * as ImagePicker from "expo-image-picker";
 
-import { supabase } from "../../lib/supabase";
-import { uploadProfilePicture } from "../../lib/supabase/uploadProfilePicture";
+import { supabase } from "../../services/supabase/client";
+import { uploadProfilePicture } from "../../services/supabase/uploadProfilePicture";
 
 import {
   fetchCounts,

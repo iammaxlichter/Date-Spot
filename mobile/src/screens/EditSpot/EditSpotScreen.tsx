@@ -1,8 +1,8 @@
 // src/screens/EditSpot/EditSpotScreen.tsx
 import React from "react";
 import { View, Keyboard, TouchableWithoutFeedback } from "react-native";
-import { NewSpotSheet } from "../NewSpotSheet";
-import { sanitizeOneToTenInput } from "../../lib/utils/numberInputValidation";
+import { NewSpotSheetScreen } from "../NewSpotSheet/NewSpotSheetScreen";
+import { sanitizeOneToTenInput } from "../../app/utils/numberInputValidation";
 import { useSpotCreation } from "../../contexts/SpotCreationContext";
 import { styles } from "./styles";
 import { useEditSpot } from "./hooks/useEditSpot";
@@ -30,7 +30,7 @@ export default function EditSpotScreen({ route, navigation }: any) {
       <View style={styles.bottomSheet}>
         <EditSpotSavingOverlay visible={edit.saving} />
 
-        <NewSpotSheet
+        <NewSpotSheetScreen
           name={edit.name}
           atmosphere={edit.atmosphere}
           dateScore={edit.dateScore}

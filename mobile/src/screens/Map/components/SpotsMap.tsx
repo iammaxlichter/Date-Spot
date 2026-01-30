@@ -1,15 +1,14 @@
-// src/screens/components/SpotsMap.tsx
 import React from "react";
 import { Keyboard } from "react-native";
 import MapView, { Marker, Region } from "react-native-maps";
-import type { Place } from "../../../lib/api/places";
+import type { Spot } from "../../../services/api/spots";
 import { GREY_MAP_STYLE } from "../constants";
 
 export function SpotsMap(props: {
   mapRef: React.RefObject<MapView | null>;
   region: Region;
   onRegionChangeComplete: (r: Region) => void;
-  spots: Place[];
+  spots: Spot[];
   isPlacingPin: boolean;
   newSpotCoords: { latitude: number; longitude: number } | null;
   onDragEnd: (coords: { latitude: number; longitude: number }) => void;
@@ -45,7 +44,9 @@ export function SpotsMap(props: {
           title={spot.name}
           description={
             spot.date_score || spot.atmosphere
-              ? `Atmosphere: ${spot.atmosphere ?? "—"} · Date: ${spot.date_score ?? "—"}`
+              ? `Atmosphere: ${spot.atmosphere ?? "—"} · Date: ${
+                  spot.date_score ?? "—"
+                }`
               : "No ratings yet"
           }
         />

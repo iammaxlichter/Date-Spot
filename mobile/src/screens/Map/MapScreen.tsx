@@ -4,7 +4,7 @@ import { View, ActivityIndicator, Alert, Text, Keyboard } from "react-native";
 import MapView, { Region } from "react-native-maps";
 
 import { useFocusEffect } from "@react-navigation/native";
-import { NewSpotSheet } from "../NewSpotSheet";
+import { NewSpotSheetScreen } from "../NewSpotSheet/NewSpotSheetScreen";
 
 import { useInitialRegionAndSpots } from "./hooks/useInitialRegionAndSpots";
 import { useSpotSearch } from "./hooks/useSpotSearch";
@@ -12,15 +12,17 @@ import { usePlacesAutocomplete } from "./hooks/usePlacesAutocomplete";
 import { useSpotCreation } from "./hooks/useSpotCreation";
 import { useSpotCreation as useSpotCreationContext } from "../../contexts/SpotCreationContext";
 
-import { fetchPlaceDetails } from "../../lib/google/places";
+import { fetchPlaceDetails } from "../../services/google/places";
 import { ZOOM_TO_GOOGLE_PLACE, ZOOM_TO_SAVED_SPOT } from "./constants";
 import type { GooglePrediction } from "./types";
 
 import { TopOverlay } from "./components/TopOverlay";
 import { PinPlacementOverlay } from "./components/PinPlacementOverlay";
 import { SpotsMap } from "./components/SpotsMap";
-import type { Place } from "../../lib/api/places";
-import { getNearbyPlaces } from "../../lib/api/places";
+
+import type { Spot } from "../../services/api/spots";
+import { getNearbySpots } from "../../services/api/spots";
+
 
 export default function MapScreen({ navigation }: any) {
   const mapRef = useRef<MapView | null>(null);
@@ -55,7 +57,7 @@ export default function MapScreen({ navigation }: any) {
 
   const refreshSpots = async () => {
     if (!region) return;
-    const data = await getNearbyPlaces(region.latitude, region.longitude, 10);
+    const data = await getNearbySpots(region.latitude, region.longitude, 10);
     setSpots(data);
   };
 
@@ -75,7 +77,7 @@ export default function MapScreen({ navigation }: any) {
     setIsCreatingSpot(isCreating);
   }, [spotCreation.isPlacingPin, spotCreation.showNewSpotSheet, setIsCreatingSpot]);
 
-  const handleSelectSavedSpot = (spot: Place) => {
+  const handleSelectSavedSpot = (spot: Spot) => {
     Keyboard.dismiss();
 
     const targetRegion: Region = {
@@ -180,7 +182,7 @@ export default function MapScreen({ navigation }: any) {
       />
 
       {spotCreation.showNewSpotSheet && spotCreation.newSpotCoords && (
-        <NewSpotSheet
+        <NewSpotSheetScreen
           name={spotCreation.draft.name}
           atmosphere={spotCreation.draft.atmosphere}
           dateScore={spotCreation.draft.dateScore}

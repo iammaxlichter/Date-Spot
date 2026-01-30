@@ -1,5 +1,5 @@
 // src/screens/EditSpot/types.ts
-import type { Price, BestFor } from "../../lib/types/datespot";
+import type { Price, BestFor } from "../../types/datespot";
 
 export type SpotEditRow = {
   id: string;

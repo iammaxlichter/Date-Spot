@@ -1,8 +1,8 @@
 // src/screens/Home/hooks/useSpotSearch.ts
 import { useMemo, useState } from "react";
-import type { Place } from "../../../lib/api/places";
+import type { Spot } from "../../../services/api/spots";
 
-export function useSpotSearch(spots: Place[]) {
+export function useSpotSearch(spots: Spot[]) {
   const [searchQuery, setSearchQuery] = useState("");
   const [showSuggestions, setShowSuggestions] = useState(false);
 

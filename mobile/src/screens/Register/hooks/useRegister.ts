@@ -1,7 +1,7 @@
 // src/screens/Register/hooks/useRegister.ts
 import * as React from "react";
 import { Alert } from "react-native";
-import { supabase } from "../../../lib/supabase";
+import { supabase } from "../../../services/supabase/client";
 
 export function useRegister() {
   const [email, setEmail] = React.useState("");

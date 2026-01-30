@@ -7,13 +7,13 @@ import {
   ScrollView,
   RefreshControl,
 } from "react-native";
-import { supabase } from "../../lib/supabase";
+import { supabase } from "../../services/supabase/client";
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import {
   getAcceptedPartnershipForUser,
   getActiveBetween,
   PartnershipRow,
-} from "../../lib/partnerships";
+} from "../../services/api/partnerships";
 
 import { s } from "./styles";
 import { ProfileHeader } from "./components/ProfileHeader";

@@ -2,7 +2,7 @@
 import * as React from "react";
 import { Alert, ImageSourcePropType } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
-import { supabase } from "../../../lib/supabase";
+import { supabase } from "../../../services/supabase/client";
 import type { SpotFull } from "../types";
 
 function timeAgo(iso: string) {

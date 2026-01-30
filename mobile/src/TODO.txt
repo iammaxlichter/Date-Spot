@@ -1,0 +1,15 @@
+pictures for datespots
+leaderboard
+total ratings per datespots
+you can see people you follow datespots (if allowed)
+edit profile screen
+changing datespot pins based on following person datespots
+pins change based on vibe 
+tag people on datespots
+logo
+fix left padding on logout button
+not so many refreshes everytime the user loads a screen (for example profile)
+^ or make refresh invisible
+AI that lets you easily import datespots
+location or something when you click the datespot of someone you follow
+or location inside datespot details (or like a "go here" button)

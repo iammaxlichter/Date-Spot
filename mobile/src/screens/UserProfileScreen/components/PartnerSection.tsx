@@ -8,7 +8,7 @@ import {
   declineRequest,
   isMutualFollow,
   PartnershipRow,
-} from "../../../lib/partnerships";
+} from "../../../services/api/partnerships";
 
 type Props = {
   me: string;

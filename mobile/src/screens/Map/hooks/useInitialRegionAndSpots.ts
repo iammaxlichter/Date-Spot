@@ -1,15 +1,14 @@
-// src/screens/Home/hooks/useInitialRegionAndSpots.ts
 import { useEffect, useState } from "react";
 import type { Region } from "react-native-maps";
 import { Alert } from "react-native";
-import { getNearbyPlaces, Place } from "../../../lib/api/places";
+import { getNearbySpots, type Spot } from "../../../services/api/spots";
 import { DEFAULT_INITIAL_REGION } from "../constants";
 
 export function useInitialRegionAndSpots() {
   const [region, setRegion] = useState<Region | null>(null);
   const [loading, setLoading] = useState(true);
   const [permissionDenied, setPermissionDenied] = useState(false);
-  const [spots, setSpots] = useState<Place[]>([]);
+  const [spots, setSpots] = useState<Spot[]>([]);
 
   useEffect(() => {
     (async () => {
@@ -18,7 +17,7 @@ export function useInitialRegionAndSpots() {
         const initialRegion: Region = { ...DEFAULT_INITIAL_REGION };
         setRegion(initialRegion);
 
-        const data = await getNearbyPlaces(
+        const data = await getNearbySpots(
           initialRegion.latitude,
           initialRegion.longitude,
           10

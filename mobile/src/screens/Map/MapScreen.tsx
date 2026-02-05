@@ -22,11 +22,14 @@ import { SpotsMap } from "./components/SpotsMap";
 
 import type { Spot } from "../../services/api/spots";
 import { getNearbySpots } from "../../services/api/spots";
+import type { SpotPhotoItem } from "../../types/spotPhotos";
 
 
 export default function MapScreen({ navigation }: any) {
   const mapRef = useRef<MapView | null>(null);
   const { setIsCreatingSpot } = useSpotCreationContext();
+  const [photos, setPhotos] = React.useState<SpotPhotoItem[]>([]);
+
 
   useFocusEffect(
     useCallback(() => {
@@ -191,6 +194,9 @@ export default function MapScreen({ navigation }: any) {
           price={spotCreation.draft.price}
           bestFor={spotCreation.draft.bestFor}
           wouldReturn={spotCreation.draft.wouldReturn}
+          photos={photos}
+          setPhotos={setPhotos}
+          debugLabel="(CREATE)"
           onChangeName={(v) => spotCreation.setField("name", v)}
           onChangeAtmosphere={(v) => spotCreation.setField("atmosphere", v)}
           onChangeDateScore={(v) => spotCreation.setField("dateScore", v)}
@@ -199,8 +205,14 @@ export default function MapScreen({ navigation }: any) {
           onChangePrice={(v) => spotCreation.setField("price", v)}
           onChangeBestFor={(v) => spotCreation.setField("bestFor", v)}
           onChangeWouldReturn={(v) => spotCreation.setField("wouldReturn", v)}
-          onCancel={spotCreation.cancelNewSpot}
-          onSave={spotCreation.saveNewSpot}
+          onCancel={() => {
+            setPhotos([]);
+            spotCreation.cancelNewSpot();
+          }}
+          onSave={async () => {
+            await spotCreation.saveNewSpot(photos.filter((p) => p.kind === "local"));
+            setPhotos([]);
+          }}
         />
       )}
     </View>

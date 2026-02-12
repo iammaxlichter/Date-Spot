@@ -22,6 +22,13 @@ type ProfileMini = {
   avatar_url: string | null;
 };
 
+type SpotPhotoPreview = {
+  id: string;
+  path: string;
+  position: number;
+  signedUrl: string;
+};
+
 type FeedRow = {
   id: string;
   created_at: string;
@@ -37,6 +44,7 @@ type FeedRow = {
   would_return: boolean;
 
   profiles: ProfileMini;
+  photos: SpotPhotoPreview[];
 };
 
 type FeedEvent = {
@@ -179,7 +187,68 @@ export default function FeedScreen() {
       setBannersReady(true);
 
       // Merge feed items
-      const spots = ((spotsData ?? []) as unknown) as FeedRow[];
+      const spotsRaw = ((spotsData ?? []) as unknown) as Omit<FeedRow, "photos">[];
+      let spots: FeedRow[] = spotsRaw.map((s) => ({ ...s, photos: [] }));
+
+      if (spotsRaw.length > 0) {
+        const spotIds = spotsRaw.map((s) => s.id);
+        const { data: photoRows, error: photosErr } = await supabase
+          .from("spot_photos")
+          .select("id,spot_id,path,position,created_at")
+          .in("spot_id", spotIds)
+          .order("position", { ascending: true })
+          .order("created_at", { ascending: true });
+
+        if (photosErr) {
+          console.error("[feed] failed to load spot photos:", photosErr);
+        } else {
+          const rows =
+            (photoRows as Array<{
+              id: string;
+              spot_id: string;
+              path: string;
+              position: number;
+              created_at: string;
+            }>) ?? [];
+
+          const paths = rows.map((r) => r.path);
+          const signedByPath = new Map<string, string>();
+
+          if (paths.length > 0) {
+            const { data: signedData, error: signedErr } = await supabase.storage
+              .from("spot-photos")
+              .createSignedUrls(paths, 3600);
+
+            if (signedErr) {
+              console.error("[feed] failed to sign spot photos:", signedErr);
+            } else {
+              for (const item of signedData ?? []) {
+                if (item?.path && item?.signedUrl) {
+                  signedByPath.set(item.path, item.signedUrl);
+                }
+              }
+            }
+          }
+
+          const photosBySpot = new Map<string, SpotPhotoPreview[]>();
+          for (const r of rows) {
+            const list = photosBySpot.get(r.spot_id) ?? [];
+            list.push({
+              id: r.id,
+              path: r.path,
+              position: r.position,
+              signedUrl: signedByPath.get(r.path) ?? "",
+            });
+            photosBySpot.set(r.spot_id, list);
+          }
+
+          spots = spotsRaw.map((s) => ({
+            ...s,
+            photos: (photosBySpot.get(s.id) ?? []).filter((p) => !!p.signedUrl),
+          }));
+        }
+      }
+
       const evs = (eventsData ?? []) as FeedEvent[];
 
       const merged: FeedItem[] = [
@@ -301,6 +370,13 @@ export default function FeedScreen() {
         </View>
 
         <Text style={s.spotName}>{spot.name}</Text>
+        {spot.photos.length > 0 ? (
+          <View style={s.photoRow}>
+            {spot.photos.slice(0, 4).map((p) => (
+              <Image key={p.id} source={{ uri: p.signedUrl }} style={s.photoThumb} />
+            ))}
+          </View>
+        ) : null}
 
         <View style={s.metricsRow}>
           <Text style={s.metric}>Atmosphere: {spot.atmosphere ?? "—"}</Text>
@@ -400,6 +476,13 @@ const s = StyleSheet.create({
   time: { fontSize: 12, color: "#777", marginTop: 2 },
 
   spotName: { fontSize: 18, fontWeight: "800", marginTop: 4, color: "#111" },
+  photoRow: { flexDirection: "row", gap: 8, marginTop: 10 },
+  photoThumb: {
+    width: 64,
+    height: 64,
+    borderRadius: 10,
+    backgroundColor: "rgba(0,0,0,0.06)",
+  },
 
   metricsRow: { flexDirection: "row", gap: 14, marginTop: 10 },
   metric: { fontSize: 13, color: "#333" },

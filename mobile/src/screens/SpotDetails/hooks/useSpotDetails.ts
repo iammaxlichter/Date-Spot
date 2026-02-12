@@ -3,6 +3,8 @@ import * as React from "react";
 import { Alert, ImageSourcePropType } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import { supabase } from "../../../services/supabase/client";
+import { fetchSpotPhotosWithSignedUrls } from "../../../services/api/spotPhotosService";
+import type { ExistingSpotPhoto } from "../../../types/spotPhotos";
 import type { SpotFull } from "../types";
 
 function timeAgo(iso: string) {
@@ -22,6 +24,7 @@ export function useSpotDetails(args: { spotId: string; navigation: any }) {
 
   const [loading, setLoading] = React.useState(true);
   const [spot, setSpot] = React.useState<SpotFull | null>(null);
+  const [photos, setPhotos] = React.useState<ExistingSpotPhoto[]>([]);
   const [expandedNotes, setExpandedNotes] = React.useState(false);
   const [currentUserId, setCurrentUserId] = React.useState<string | null>(null);
 
@@ -56,6 +59,14 @@ export function useSpotDetails(args: { spotId: string; navigation: any }) {
       if (error) throw error;
 
       setSpot(data as unknown as SpotFull);
+
+      try {
+        const loadedPhotos = await fetchSpotPhotosWithSignedUrls({ spotId });
+        setPhotos(loadedPhotos);
+      } catch (photoErr) {
+        console.error("[spotDetails] photo load error:", photoErr);
+        setPhotos([]);
+      }
     } catch (e: any) {
       console.error(e);
       Alert.alert("Error", e?.message ?? "Failed to load DateSpot.");
@@ -111,6 +122,7 @@ export function useSpotDetails(args: { spotId: string; navigation: any }) {
   return {
     loading,
     spot,
+    photos,
     expandedNotes,
     setExpandedNotes,
     isOwner,

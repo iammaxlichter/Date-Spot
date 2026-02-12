@@ -16,6 +16,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import type { Props } from "./types";
 import { Chip } from "./components/Chip";
+import { SpotPhotosPicker } from "./components/SpotPhotosPicker";
 
 export function NewSpotSheetScreen({
   name,
@@ -27,6 +28,10 @@ export function NewSpotSheetScreen({
   bestFor,
   wouldReturn,
   title,
+  photos,
+  debugLabel,
+  setPhotos,
+  enableFullscreenPreview,
   onChangeName,
   onChangeAtmosphere,
   onChangeDateScore,
@@ -69,6 +74,9 @@ export function NewSpotSheetScreen({
     !!vibe && !isPresetVibe(vibe)
   );
 
+  
+
+
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
       <View style={styles.bottomSheet}>
@@ -87,6 +95,13 @@ export function NewSpotSheetScreen({
             onChangeText={onChangeName}
             returnKeyType="done"
             onSubmitEditing={Keyboard.dismiss}
+          />
+
+          <SpotPhotosPicker
+            photos={photos}
+            setPhotos={setPhotos}
+            debugLabel={debugLabel}
+            enableFullscreenPreview={enableFullscreenPreview}
           />
 
           <View style={styles.row}>

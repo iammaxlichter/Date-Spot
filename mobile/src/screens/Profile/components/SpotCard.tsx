@@ -1,5 +1,5 @@
 import React from "react";
-import { View, Text } from "react-native";
+import { View, Text, Image } from "react-native";
 import { s } from "../styles";
 import type { SpotRow } from "../api/profileApi";
 
@@ -12,6 +12,14 @@ export function SpotCard(props: { spot: SpotRow; timeAgo: (iso: string) => strin
         <Text style={s.spotName}>{spot.name}</Text>
         <Text style={s.spotTime}>{timeAgo(spot.created_at)} ago</Text>
       </View>
+
+      {spot.photos.length > 0 ? (
+        <View style={s.spotPhotoRow}>
+          {spot.photos.slice(0, 4).map((photo) => (
+            <Image key={photo.id} source={{ uri: photo.signedUrl }} style={s.spotPhotoThumb} />
+          ))}
+        </View>
+      ) : null}
 
       <View style={s.spotMetrics}>
         <Text style={s.spotMetric}>Atmosphere: {spot.atmosphere ?? "—"}</Text>

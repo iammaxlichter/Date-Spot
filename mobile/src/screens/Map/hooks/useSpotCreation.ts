@@ -4,7 +4,101 @@ import type { Region } from "react-native-maps";
 import { Alert } from "react-native";
 import { supabase } from "../../../services/supabase/client";
 import type { Coords, NewSpotDraft } from "../types";
+import * as FileSystem from "expo-file-system/legacy";
 
+/* ============================================================
+   Base64 decode helper (no atob dependency)
+   ============================================================ */
+function base64ToUint8Array(base64: string): Uint8Array {
+  // RN doesn't reliably support atob/btoa. Decode base64 manually.
+  const chars =
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+  const cleaned = base64.replace(/[^A-Za-z0-9+/=]/g, "");
+
+  const bytes: number[] = [];
+  let i = 0;
+
+  while (i < cleaned.length) {
+    const enc1 = chars.indexOf(cleaned.charAt(i++));
+    const enc2 = chars.indexOf(cleaned.charAt(i++));
+    const enc3 = chars.indexOf(cleaned.charAt(i++));
+    const enc4 = chars.indexOf(cleaned.charAt(i++));
+
+    const chr1 = (enc1 << 2) | (enc2 >> 4);
+    const chr2 = ((enc2 & 15) << 4) | (enc3 >> 2);
+    const chr3 = ((enc3 & 3) << 6) | enc4;
+
+    bytes.push(chr1);
+
+    if (enc3 !== 64 && cleaned.charAt(i - 2) !== "=") bytes.push(chr2);
+    if (enc4 !== 64 && cleaned.charAt(i - 1) !== "=") bytes.push(chr3);
+  }
+
+  return new Uint8Array(bytes);
+}
+
+/* ============================================================
+   Photo upload helper
+   ============================================================ */
+/* ============================================================
+   Photo upload helper
+   ============================================================ */
+async function uploadSpotPhotos(args: {
+  spotId: string;
+  userId: string;
+  photos: { id: string; uri: string; mimeType: string }[];
+}) {
+  const { spotId, userId, photos } = args;
+
+  for (let i = 0; i < photos.length; i++) {
+    const photo = photos[i];
+
+    const fileExt = photo.mimeType === "image/png" ? "png" : "jpg";
+    const path = `${userId}/${spotId}/${photo.id}.${fileExt}`;
+
+    try {
+      // 1) Read local file:// as base64
+      const base64 = await FileSystem.readAsStringAsync(photo.uri, {
+        encoding: "base64",
+      });
+
+      // 2) Convert base64 -> Uint8Array (safe for RN/Expo)
+      const bytes = base64ToUint8Array(base64);
+
+      // 3) Upload to Supabase Storage
+      const { data, error: uploadError } = await supabase.storage
+        .from("spot-photos")
+        .upload(path, bytes, {
+          contentType: photo.mimeType,
+          upsert: false,
+        });
+
+      if (uploadError) {
+        console.error('      ❌ Upload failed:', uploadError);
+        console.error('      Error details:', JSON.stringify(uploadError, null, 2));
+        continue; // don't abort everything
+      }
+      // 4) Insert DB row
+      const { error: dbError } = await supabase.from("spot_photos").insert({
+        spot_id: spotId,
+        user_id: userId,
+        path,
+        position: i,
+      });
+
+      if (dbError) {
+        console.error('      ❌ DB insert failed:', dbError);
+      }
+    } catch (err) {
+      console.error('      ❌ Photo processing failed:', err);
+    }
+  }
+
+}
+
+/* ============================================================
+   Draft helpers
+   ============================================================ */
 function makeEmptyDraft(coords: Coords | null): NewSpotDraft {
   return {
     coords,
@@ -26,6 +120,9 @@ async function requireUserId(): Promise<string> {
   return data.user.id;
 }
 
+/* ============================================================
+   Hook
+   ============================================================ */
 export function useSpotCreation(params: { onSaved: (place: any) => void }) {
   const { onSaved } = params;
 
@@ -68,12 +165,12 @@ export function useSpotCreation(params: { onSaved: (place: any) => void }) {
     setDraft((prev) => ({ ...prev, [key]: value }));
   };
 
-  /**
-   * Single-call save:
-   * Inserts one row into Supabase "spots" with all fields.
-   * (No more createPlace() + createSpotRating() two-step flow.)
-   */
-  const saveNewSpot = async () => {
+  /* ============================================================
+     SAVE (with photos)
+     ============================================================ */
+  const saveNewSpot = async (
+    photos: { id: string; uri: string; mimeType: string }[] = []
+  ) => {
     if (!draft.coords) return;
 
     if (!draft.name.trim()) {
@@ -90,7 +187,6 @@ export function useSpotCreation(params: { onSaved: (place: any) => void }) {
         latitude: draft.coords.latitude,
         longitude: draft.coords.longitude,
 
-        // your schema stores atmosphere as text, date_score as number
         atmosphere: draft.atmosphere ? String(draft.atmosphere) : null,
         date_score: draft.dateScore ? Number(draft.dateScore) : null,
         notes: draft.notes.trim() || null,
@@ -99,8 +195,6 @@ export function useSpotCreation(params: { onSaved: (place: any) => void }) {
         best_for: draft.bestFor ?? null,
         would_return: draft.wouldReturn,
       };
-
-      console.log("Saving spot (single insert)…");
 
       const { data, error } = await supabase
         .from("spots")
@@ -112,6 +206,15 @@ export function useSpotCreation(params: { onSaved: (place: any) => void }) {
 
       if (error) throw error;
       if (!data) throw new Error("Failed to save spot");
+
+      // Upload photos AFTER spot exists
+      if (photos.length > 0) {
+        await uploadSpotPhotos({
+          spotId: data.id,
+          userId,
+          photos,
+        });
+      }
 
       onSaved(data);
 
@@ -141,7 +244,7 @@ export function useSpotCreation(params: { onSaved: (place: any) => void }) {
     setField,
     saveNewSpot,
 
-    // setters (if you need them)
+    // setters
     setIsPlacingPin,
     setShowNewSpotSheet,
   };

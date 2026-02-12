@@ -38,6 +38,41 @@ export const s = StyleSheet.create({
   time: { fontSize: 12, color: "#777", marginTop: 2 },
 
   title: { fontSize: 22, fontWeight: "900", color: "#111", marginTop: 6 },
+  photoSection: { marginTop: 10 },
+  photoRow: { gap: 10, paddingRight: 4 },
+  photoThumb: {
+    width: 92,
+    height: 92,
+    borderRadius: 12,
+    backgroundColor: "rgba(0,0,0,0.06)",
+  },
+  photoModalBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.95)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 16,
+  },
+  photoModalClose: {
+    position: "absolute",
+    top: 56,
+    right: 18,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.35)",
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    backgroundColor: "rgba(0,0,0,0.45)",
+  },
+  photoModalCloseText: {
+    color: "#fff",
+    fontSize: 13,
+    fontWeight: "700",
+  },
+  photoModalImage: {
+    width: "100%",
+    height: "80%",
+  },
 
   section: { marginTop: 14 },
   label: { fontSize: 13, fontWeight: "800", color: "#111", marginBottom: 8 },

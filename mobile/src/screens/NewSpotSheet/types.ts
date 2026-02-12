@@ -1,6 +1,7 @@
 // src/screens/NewSpotSheet/types.ts
 import type { Price, BestFor } from "../../types/datespot";
 import type { SpotPhotoItem } from "../../types/spotPhotos";
+import type { TaggedUser } from "../../services/api/spotTags";
 
 export type Props = {
   name: string;
@@ -20,6 +21,10 @@ export type Props = {
   enableFullscreenPreview?: boolean;
 
   debugLabel?: string;
+
+  selectedTaggedUsers: TaggedUser[];
+  eligibleTagUsers: TaggedUser[];
+  tagUsersLoading: boolean;
   
   onChangeName: (v: string) => void;
   onChangeAtmosphere: (v: string) => void;
@@ -30,6 +35,7 @@ export type Props = {
   onChangePrice: (v: Price | null) => void;
   onChangeBestFor: (v: BestFor | null) => void;
   onChangeWouldReturn: (v: boolean) => void;
+  onChangeTaggedUsers: (users: TaggedUser[]) => void;
 
   onCancel: () => void;
   onSave: () => void;

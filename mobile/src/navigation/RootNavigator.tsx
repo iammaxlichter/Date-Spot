@@ -82,7 +82,7 @@ function NavigatorContent() {
                       onPress={async () => {
                         await supabase.auth.signOut();
                       }}
-                      style={{ marginRight: 12 }}
+                      style={{ paddingHorizontal: 8, paddingVertical: 6 }}
                     >
                       <Text style={{ color: "red", fontWeight: "600" }}>
                         Logout

@@ -5,6 +5,12 @@ import { supabase } from "../../../services/supabase/client";
 import { sanitizeOneToTenInput } from "../../../app/utils/numberInputValidation";
 import type { Price, BestFor } from "../../../types/datespot";
 import type { SpotEditRow } from "../types";
+import {
+  fetchEligibleTagUsers,
+  fetchSpotTags,
+  upsertSpotTags,
+  type TaggedUser,
+} from "../../../services/api/spotTags";
 
 import type { SpotPhotoItem } from "../../../types/spotPhotos";
 import { syncSpotPhotosOnEdit } from "../../../services/api/spotPhotosService";
@@ -26,6 +32,9 @@ export function useEditSpot(args: { spotId: string; navigation: any }) {
   const [price, setPrice] = React.useState<Price | null>(null);
   const [bestFor, setBestFor] = React.useState<BestFor | null>(null);
   const [wouldReturn, setWouldReturn] = React.useState<boolean>(true);
+  const [selectedTaggedUsers, setSelectedTaggedUsers] = React.useState<TaggedUser[]>([]);
+  const [eligibleTagUsers, setEligibleTagUsers] = React.useState<TaggedUser[]>([]);
+  const [tagUsersLoading, setTagUsersLoading] = React.useState(false);
 
   React.useEffect(() => {
     (async () => {
@@ -78,11 +87,23 @@ export function useEditSpot(args: { spotId: string; navigation: any }) {
       setPrice((row.price as Price | null) ?? null);
       setBestFor((row.best_for as BestFor | null) ?? null);
       setWouldReturn(!!row.would_return);
+
+      if (currentUserId) {
+        setTagUsersLoading(true);
+        const [existingTags, eligible] = await Promise.all([
+          fetchSpotTags(spotId),
+          fetchEligibleTagUsers(currentUserId),
+        ]);
+        setSelectedTaggedUsers(existingTags);
+        setEligibleTagUsers(eligible);
+        setTagUsersLoading(false);
+      }
     } catch (e: any) {
       console.error(e);
       Alert.alert("Error", e?.message ?? "Failed to load DateSpot.");
       navigation.goBack();
     } finally {
+      setTagUsersLoading(false);
       setLoading(false);
     }
   }, [currentUserId, navigation, spotId]);
@@ -156,6 +177,11 @@ export function useEditSpot(args: { spotId: string; navigation: any }) {
         const { error } = await supabase.from("spots").update(payload).eq("id", spotId);
         if (error) throw error;
 
+        await upsertSpotTags(
+          spotId,
+          selectedTaggedUsers.map((u) => u.id)
+        );
+
         Alert.alert("Saved", "Your DateSpot was updated.");
         navigation.goBack();
       } catch (e: any) {
@@ -176,6 +202,7 @@ export function useEditSpot(args: { spotId: string; navigation: any }) {
       spotId,
       vibe,
       wouldReturn,
+      selectedTaggedUsers,
     ]
   );
 
@@ -197,6 +224,9 @@ export function useEditSpot(args: { spotId: string; navigation: any }) {
     price,
     bestFor,
     wouldReturn,
+    selectedTaggedUsers,
+    eligibleTagUsers,
+    tagUsersLoading,
 
     // setters (match NewSpotSheet)
     setName,
@@ -207,6 +237,7 @@ export function useEditSpot(args: { spotId: string; navigation: any }) {
     setPrice,
     setBestFor,
     setWouldReturn,
+    setSelectedTaggedUsers,
 
     // actions
     onSave,

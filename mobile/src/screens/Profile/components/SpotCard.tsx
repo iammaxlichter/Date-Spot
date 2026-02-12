@@ -1,10 +1,14 @@
 import React from "react";
-import { View, Text, Image } from "react-native";
+import { View, Text, Image, Pressable } from "react-native";
 import { s } from "../styles";
 import type { SpotRow } from "../api/profileApi";
 
-export function SpotCard(props: { spot: SpotRow; timeAgo: (iso: string) => string }) {
-  const { spot, timeAgo } = props;
+export function SpotCard(props: {
+  spot: SpotRow;
+  timeAgo: (iso: string) => string;
+  onPressTaggedUser: (userId: string) => void;
+}) {
+  const { spot, timeAgo, onPressTaggedUser } = props;
 
   return (
     <View style={s.spotCard}>
@@ -35,6 +39,29 @@ export function SpotCard(props: { spot: SpotRow; timeAgo: (iso: string) => strin
           {spot.would_return ? "Would return" : "Would not return"}
         </Text>
       </View>
+
+      {spot.tagged_users.length > 0 ? (
+        <View style={s.spotWentWithRow}>
+          <Text style={s.spotWentWithLabel}>Went with: </Text>
+          <View style={s.spotWentWithUsersWrap}>
+            {spot.tagged_users.map((user, idx) => (
+              <Pressable
+                key={user.id}
+                onPress={(e) => {
+                  e.stopPropagation();
+                  onPressTaggedUser(user.id);
+                }}
+                hitSlop={8}
+              >
+                <Text style={s.spotTaggedUser}>
+                  @{user.username ?? "unknown"}
+                  {idx < spot.tagged_users.length - 1 ? ", " : ""}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+        </View>
+      ) : null}
     </View>
   );
 }

@@ -166,6 +166,25 @@ export const s = StyleSheet.create({
     flexWrap: "wrap",
     gap: 8,
   },
+  spotWentWithRow: {
+    marginTop: 10,
+    flexDirection: "row",
+    flexWrap: "wrap",
+  },
+  spotWentWithLabel: {
+    fontSize: 13,
+    color: "#444",
+    fontWeight: "600",
+  },
+  spotWentWithUsersWrap: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+  },
+  spotTaggedUser: {
+    fontSize: 13,
+    color: "#1b5fc6",
+    fontWeight: "700",
+  },
   spotPill: {
     borderWidth: 1,
     borderColor: "#eee",

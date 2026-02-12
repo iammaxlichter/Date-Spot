@@ -5,6 +5,7 @@ import { Alert } from "react-native";
 import { supabase } from "../../../services/supabase/client";
 import type { Coords, NewSpotDraft } from "../types";
 import * as FileSystem from "expo-file-system/legacy";
+import { upsertSpotTags } from "../../../services/api/spotTags";
 
 /* ============================================================
    Base64 decode helper (no atob dependency)
@@ -169,7 +170,8 @@ export function useSpotCreation(params: { onSaved: (place: any) => void }) {
      SAVE (with photos)
      ============================================================ */
   const saveNewSpot = async (
-    photos: { id: string; uri: string; mimeType: string }[] = []
+    photos: { id: string; uri: string; mimeType: string }[] = [],
+    taggedUserIds: string[] = []
   ) => {
     if (!draft.coords) return;
 
@@ -215,6 +217,9 @@ export function useSpotCreation(params: { onSaved: (place: any) => void }) {
           photos,
         });
       }
+
+      // Save tagged users after spot exists.
+      await upsertSpotTags(data.id, taggedUserIds);
 
       onSaved(data);
 

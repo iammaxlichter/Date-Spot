@@ -15,6 +15,7 @@ import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import { supabase } from "../../services/supabase/client";
 import { PendingPartnerBanner } from "./components/PendingPartnerBanner";
 import { PartnershipRow } from "../../services/api/partnerships";
+import { fetchSpotTagsForSpotIds, type TaggedUser } from "../../services/api/spotTags";
 
 type ProfileMini = {
   id: string;
@@ -33,7 +34,6 @@ type FeedRow = {
   id: string;
   created_at: string;
   user_id: string;
-
   name: string;
   atmosphere: string | null;
   date_score: number | null;
@@ -42,9 +42,9 @@ type FeedRow = {
   price: string | null;
   best_for: string | null;
   would_return: boolean;
-
   profiles: ProfileMini;
   photos: SpotPhotoPreview[];
+  tagged_users: TaggedUser[];
 };
 
 type FeedEvent = {
@@ -78,19 +78,10 @@ export default function FeedScreen() {
   const [rows, setRows] = React.useState<FeedRow[]>([]);
   const [currentUserId, setCurrentUserId] = React.useState<string | null>(null);
   const [pendingIncoming, setPendingIncoming] = React.useState<PartnershipRow[]>([]);
-  const [events, setEvents] = React.useState<FeedEvent[]>([]);
   const [feedItems, setFeedItems] = React.useState<FeedItem[]>([]);
-
-  // banner controls
   const [hideAllBanners, setHideAllBanners] = React.useState(false);
-
-  // NEW: hard gate to prevent any banner render until this load decides banner state
   const [bannersReady, setBannersReady] = React.useState(false);
-
-  // NEW: once we accept, lock banners off immediately for this screen lifetime
   const bannerLockRef = React.useRef(false);
-
-  // prevent stale overlapping loads from committing (race fix)
   const loadSeqRef = React.useRef(0);
 
   const loadFeed = React.useCallback(async () => {
@@ -98,7 +89,6 @@ export default function FeedScreen() {
     const isStale = () => seq !== loadSeqRef.current;
 
     try {
-      // During reload, do NOT render banners at all until we recompute them.
       if (!isStale()) setBannersReady(false);
 
       const { data: userRes, error: userErr } = await supabase.auth.getUser();
@@ -108,12 +98,10 @@ export default function FeedScreen() {
 
       if (!isStale()) setCurrentUserId(user.id);
 
-      // follows
       const { data: follows, error: followsErr } = await supabase
         .from("follows")
         .select("following_id")
         .eq("follower_id", user.id);
-
       if (followsErr) throw followsErr;
 
       const followingIds = (follows ?? [])
@@ -122,7 +110,6 @@ export default function FeedScreen() {
 
       const feedUserIds = Array.from(new Set([user.id, ...followingIds]));
 
-      // Fetch spots + (accepted partnership + pending) + events
       const spotsPromise = supabase
         .from("spots")
         .select(
@@ -168,39 +155,40 @@ export default function FeedScreen() {
       if (acceptedErr) throw acceptedErr;
       if (pendingErr) throw pendingErr;
       if (eventsErr) throw eventsErr;
-
       if (isStale()) return;
 
-      // Filter incoming pending
       const incoming = (pendingData ?? []).filter((p: any) => p.requested_by !== user.id);
-
-      // Decide banner hide:
-      // - if we locally locked (accepted just happened), hide
-      // - OR if server shows an accepted partnership, hide
       const serverHasAccepted = !!acceptedData?.id;
       const shouldHide = bannerLockRef.current || serverHasAccepted;
-
       setHideAllBanners(shouldHide);
       setPendingIncoming(incoming);
-
-      // Now banners are allowed to render (but shouldHide may prevent them)
       setBannersReady(true);
 
-      // Merge feed items
-      const spotsRaw = ((spotsData ?? []) as unknown) as Omit<FeedRow, "photos">[];
-      let spots: FeedRow[] = spotsRaw.map((s) => ({ ...s, photos: [] }));
+      const spotsRaw = ((spotsData ?? []) as unknown) as Omit<
+        FeedRow,
+        "photos" | "tagged_users"
+      >[];
+      let spots: FeedRow[] = spotsRaw.map((s) => ({ ...s, photos: [], tagged_users: [] }));
 
       if (spotsRaw.length > 0) {
         const spotIds = spotsRaw.map((s) => s.id);
-        const { data: photoRows, error: photosErr } = await supabase
-          .from("spot_photos")
-          .select("id,spot_id,path,position,created_at")
-          .in("spot_id", spotIds)
-          .order("position", { ascending: true })
-          .order("created_at", { ascending: true });
+        const [{ data: photoRows, error: photosErr }, tagsBySpot] = await Promise.all([
+          supabase
+            .from("spot_photos")
+            .select("id,spot_id,path,position,created_at")
+            .in("spot_id", spotIds)
+            .order("position", { ascending: true })
+            .order("created_at", { ascending: true }),
+          fetchSpotTagsForSpotIds(spotIds),
+        ]);
 
         if (photosErr) {
           console.error("[feed] failed to load spot photos:", photosErr);
+          spots = spotsRaw.map((s) => ({
+            ...s,
+            photos: [],
+            tagged_users: tagsBySpot[s.id] ?? [],
+          }));
         } else {
           const rows =
             (photoRows as Array<{
@@ -223,9 +211,7 @@ export default function FeedScreen() {
               console.error("[feed] failed to sign spot photos:", signedErr);
             } else {
               for (const item of signedData ?? []) {
-                if (item?.path && item?.signedUrl) {
-                  signedByPath.set(item.path, item.signedUrl);
-                }
+                if (item?.path && item?.signedUrl) signedByPath.set(item.path, item.signedUrl);
               }
             }
           }
@@ -245,27 +231,25 @@ export default function FeedScreen() {
           spots = spotsRaw.map((s) => ({
             ...s,
             photos: (photosBySpot.get(s.id) ?? []).filter((p) => !!p.signedUrl),
+            tagged_users: tagsBySpot[s.id] ?? [],
           }));
         }
       }
 
       const evs = (eventsData ?? []) as FeedEvent[];
-
       const merged: FeedItem[] = [
-        ...spots.map((s) => ({ kind: "spot" as const, created_at: s.created_at, spot: s })),
-        ...evs.map((e) => ({ kind: "event" as const, created_at: e.created_at, event: e })),
+        ...spots.map((spot) => ({ kind: "spot" as const, created_at: spot.created_at, spot })),
+        ...evs.map((event) => ({ kind: "event" as const, created_at: event.created_at, event })),
       ].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
       setFeedItems(merged);
       setRows(spots);
-      setEvents(evs);
     } catch (e: any) {
       if (seq !== loadSeqRef.current) return;
       throw e;
     }
   }, []);
 
-  // initial load
   React.useEffect(() => {
     (async () => {
       try {
@@ -280,7 +264,6 @@ export default function FeedScreen() {
     })();
   }, [loadFeed]);
 
-  // refresh whenever you return to the feed screen
   useFocusEffect(
     React.useCallback(() => {
       void (async () => {
@@ -322,76 +305,75 @@ export default function FeedScreen() {
 
     const spot = item.spot;
     const profile = spot.profiles;
-
     const avatarSource = profile?.avatar_url
       ? { uri: profile.avatar_url }
       : require("../../../assets/default-avatar.png");
-
     const username = profile?.username ? `@${profile.username}` : "@unknown";
 
-    const handleProfilePress = () => {
-      if (currentUserId && spot.user_id === currentUserId) {
+    const goProfile = (userId: string) => {
+      if (currentUserId && userId === currentUserId) {
         navigation.navigate("Profile");
       } else {
-        navigation.navigate("UserProfile", { userId: spot.user_id });
+        navigation.navigate("UserProfile", { userId });
       }
     };
 
-    const handleSpotPress = () => {
-      navigation.navigate("SpotDetails", { spotId: spot.id });
-    };
-
     return (
-      <Pressable onPress={handleSpotPress} style={s.card}>
-        <View style={s.headerRow}>
-          <Pressable
-            onPress={(e) => {
-              e.stopPropagation();
-              handleProfilePress();
-            }}
-            hitSlop={8}
-          >
-            <Image source={avatarSource} style={s.avatar} />
-          </Pressable>
-
-          <View style={{ flex: 1 }}>
-            <Pressable
-              onPress={(e) => {
-                e.stopPropagation();
-                handleProfilePress();
-              }}
-              hitSlop={8}
-            >
-              <Text style={s.username}>{username}</Text>
+      <View style={s.card}>
+        <Pressable onPress={() => navigation.navigate("SpotDetails", { spotId: spot.id })}>
+          <View style={s.headerRow}>
+            <Pressable onPress={() => goProfile(spot.user_id)} hitSlop={8}>
+              <Image source={avatarSource} style={s.avatar} />
             </Pressable>
 
-            <Text style={s.time}>{timeAgo(spot.created_at)} ago</Text>
+            <View style={{ flex: 1 }}>
+              <Pressable onPress={() => goProfile(spot.user_id)} hitSlop={8}>
+                <Text style={s.username}>{username}</Text>
+              </Pressable>
+              <Text style={s.time}>{timeAgo(spot.created_at)} ago</Text>
+            </View>
           </View>
-        </View>
 
-        <Text style={s.spotName}>{spot.name}</Text>
-        {spot.photos.length > 0 ? (
-          <View style={s.photoRow}>
-            {spot.photos.slice(0, 4).map((p) => (
-              <Image key={p.id} source={{ uri: p.signedUrl }} style={s.photoThumb} />
-            ))}
+          <Text style={s.spotName}>{spot.name}</Text>
+          {spot.photos.length > 0 ? (
+            <View style={s.photoRow}>
+              {spot.photos.slice(0, 4).map((p) => (
+                <Image key={p.id} source={{ uri: p.signedUrl }} style={s.photoThumb} />
+              ))}
+            </View>
+          ) : null}
+
+          <View style={s.metricsRow}>
+            <Text style={s.metric}>Atmosphere: {spot.atmosphere ?? "—"}</Text>
+            <Text style={s.metric}>Date score: {spot.date_score ?? "—"}</Text>
+          </View>
+
+          <View style={s.metaRow}>
+            {spot.vibe ? <Text style={s.pill}>{spot.vibe}</Text> : null}
+            {spot.price ? <Text style={s.pill}>{spot.price}</Text> : null}
+            {spot.best_for ? <Text style={s.pill}>{spot.best_for}</Text> : null}
+            <Text style={[s.pill, spot.would_return ? s.pillYes : s.pillNo]}>
+              {spot.would_return ? "Would return" : "Would not return"}
+            </Text>
+          </View>
+        </Pressable>
+
+        {spot.tagged_users.length > 0 ? (
+          <View style={s.wentWithRow}>
+            <Text style={s.wentWithLabel}>Went with: </Text>
+            <View style={s.wentWithUsersWrap}>
+              {spot.tagged_users.map((user, idx) => (
+                <Pressable key={user.id} onPress={() => goProfile(user.id)} hitSlop={8}>
+                  <Text style={s.wentWithUser}>
+                    @{user.username ?? "unknown"}
+                    {idx < spot.tagged_users.length - 1 ? ", " : ""}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
           </View>
         ) : null}
-
-        <View style={s.metricsRow}>
-          <Text style={s.metric}>Atmosphere: {spot.atmosphere ?? "—"}</Text>
-          <Text style={s.metric}>Date score: {spot.date_score ?? "—"}</Text>
-        </View>
-
-        <View style={s.metaRow}>
-          {spot.vibe ? <Text style={s.pill}>{spot.vibe}</Text> : null}
-          {spot.price ? <Text style={s.pill}>{spot.price}</Text> : null}
-          {spot.best_for ? <Text style={s.pill}>{spot.best_for}</Text> : null}
-          <Text style={[s.pill, spot.would_return ? s.pillYes : s.pillNo]}>
-            {spot.would_return ? "Would return" : "Would not return"}
-          </Text>
-        </View>
-      </Pressable>
+      </View>
     );
   };
 
@@ -410,29 +392,22 @@ export default function FeedScreen() {
         data={feedItems}
         ListHeaderComponent={
           <View>
-            {/* IMPORTANT: banners only render when bannersReady=true */}
-            {bannersReady &&
-            currentUserId &&
-            pendingIncoming.length > 0 &&
-            !hideAllBanners ? (
-              <>
-                {pendingIncoming.map((partnership) => (
+            {bannersReady && currentUserId && pendingIncoming.length > 0 && !hideAllBanners
+              ? pendingIncoming.map((partnership) => (
                   <PendingPartnerBanner
                     key={partnership.id}
                     me={currentUserId}
                     partnership={partnership}
                     onResolved={() => loadFeed()}
                     onAnyAccepted={() => {
-                      // hard lock immediately (no flash), and clear local pending
                       bannerLockRef.current = true;
                       setHideAllBanners(true);
                       setPendingIncoming([]);
                       setBannersReady(true);
                     }}
                   />
-                ))}
-              </>
-            ) : null}
+                ))
+              : null}
           </View>
         }
         keyExtractor={(x) => (x.kind === "spot" ? `spot:${x.spot.id}` : `event:${x.event.id}`)}
@@ -459,7 +434,6 @@ export default function FeedScreen() {
 
 const s = StyleSheet.create({
   screen: { flex: 1, backgroundColor: "#fff" },
-
   card: {
     borderWidth: 1,
     borderColor: "#eee",
@@ -468,13 +442,10 @@ const s = StyleSheet.create({
     marginBottom: 12,
     backgroundColor: "#fff",
   },
-
   headerRow: { flexDirection: "row", alignItems: "center", marginBottom: 10 },
   avatar: { width: 42, height: 42, borderRadius: 21, marginRight: 10 },
-
   username: { fontSize: 14, fontWeight: "800", color: "#111" },
   time: { fontSize: 12, color: "#777", marginTop: 2 },
-
   spotName: { fontSize: 18, fontWeight: "800", marginTop: 4, color: "#111" },
   photoRow: { flexDirection: "row", gap: 8, marginTop: 10 },
   photoThumb: {
@@ -483,10 +454,8 @@ const s = StyleSheet.create({
     borderRadius: 10,
     backgroundColor: "rgba(0,0,0,0.06)",
   },
-
   metricsRow: { flexDirection: "row", gap: 14, marginTop: 10 },
   metric: { fontSize: 13, color: "#333" },
-
   metaRow: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 10 },
   pill: {
     borderWidth: 1,
@@ -500,10 +469,13 @@ const s = StyleSheet.create({
   },
   pillYes: { backgroundColor: "#f2fff7", borderColor: "#d6ffe6" },
   pillNo: { backgroundColor: "#fff6f6", borderColor: "#ffe0e0" },
-
   empty: { alignItems: "center", paddingTop: 80, paddingHorizontal: 24 },
   emptyTitle: { fontSize: 18, fontWeight: "800", marginBottom: 8 },
   emptyText: { fontSize: 13, color: "#666", textAlign: "center" },
   footer: { alignItems: "center", paddingVertical: 100 },
   footerText: { fontSize: 14, color: "#999", fontStyle: "italic" },
+  wentWithRow: { flexDirection: "row", flexWrap: "wrap", marginTop: 10 },
+  wentWithLabel: { fontSize: 13, color: "#444", fontWeight: "700" },
+  wentWithUsersWrap: { flexDirection: "row", flexWrap: "wrap" },
+  wentWithUser: { fontSize: 13, color: "#1b5fc6", fontWeight: "700" },
 });

@@ -19,6 +19,7 @@ export default function SpotDetailsScreen({ route }: any) {
 
   if (d.loading) return <SpotDetailsLoading />;
   if (!d.spot) return null;
+  const taggedUsers = d.spot.tagged_users ?? [];
 
   return (
     <ScrollView style={s.screen} contentContainerStyle={{ padding: 14, paddingBottom: 24 }}>
@@ -47,6 +48,22 @@ export default function SpotDetailsScreen({ route }: any) {
         />
 
         <SpotTags vibe={d.spot.vibe} price={d.spot.price} bestFor={d.spot.best_for} />
+
+        {taggedUsers.length > 0 ? (
+          <View style={s.section}>
+            <Text style={s.label}>Went with</Text>
+            <View style={s.wentWithRow}>
+              {taggedUsers.map((user, idx) => (
+                <Pressable key={user.id} onPress={() => d.onTaggedUserPress(user.id)} hitSlop={8}>
+                  <Text style={s.wentWithUser}>
+                    @{user.username ?? "unknown"}
+                    {idx < taggedUsers.length - 1 ? ", " : ""}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+          </View>
+        ) : null}
 
         <SpotNotes
           notes={d.notes}

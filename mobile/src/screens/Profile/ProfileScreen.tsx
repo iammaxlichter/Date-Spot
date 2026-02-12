@@ -398,6 +398,10 @@ export default function ProfileScreen() {
         spots={spots}
         spotsLoading={spotsLoading}
         onPressSpot={(spotId) => navigation.navigate("SpotDetails", { spotId })}
+        onPressTaggedUser={(userId) => {
+          if (profile.id === userId) navigation.navigate("Profile");
+          else navigation.navigate("UserProfile", { userId });
+        }}
         timeAgo={timeAgo}
       />
 

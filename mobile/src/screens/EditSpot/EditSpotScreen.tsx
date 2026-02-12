@@ -1,6 +1,6 @@
 // src/screens/EditSpot/EditSpotScreen.tsx
 import React from "react";
-import { View, Keyboard, TouchableWithoutFeedback, Alert } from "react-native";
+import { View, Alert } from "react-native";
 
 import { NewSpotSheetScreen } from "../NewSpotSheet/NewSpotSheetScreen";
 import { sanitizeOneToTenInput } from "../../app/utils/numberInputValidation";
@@ -58,43 +58,45 @@ export default function EditSpotScreen({ route, navigation }: any) {
   }
 
   return (
-    <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-      <View style={styles.bottomSheet}>
-        <EditSpotSavingOverlay visible={edit.saving} />
+    <View style={styles.bottomSheet}>
+      <EditSpotSavingOverlay visible={edit.saving} />
 
-        <NewSpotSheetScreen
-          name={edit.name}
-          atmosphere={edit.atmosphere}
-          dateScore={edit.dateScore}
-          notes={edit.notes}
-          vibe={edit.vibe}
-          price={edit.price}
-          bestFor={edit.bestFor}
-          wouldReturn={edit.wouldReturn}
-          title="Edit Date Spot"
-          photos={photos}
-          debugLabel="(EDIT)"
-          enableFullscreenPreview
-          setPhotos={setPhotos}
-          onChangeName={edit.setName}
-          onChangeAtmosphere={(v) => edit.setAtmosphere(sanitizeOneToTenInput(v))}
-          onChangeDateScore={(v) => edit.setDateScore(sanitizeOneToTenInput(v))}
-          onChangeNotes={edit.setNotes}
-          onChangeVibe={edit.setVibe}
-          onChangePrice={edit.setPrice}
-          onChangeBestFor={edit.setBestFor}
-          onChangeWouldReturn={edit.setWouldReturn}
-          onCancel={() => {
-            setPhotos([]);
-            initialPhotosRef.current = null;
-            edit.onCancel();
-          }}
-          onSave={() => {
-            const initial = initialPhotosRef.current ?? [];
-            return edit.onSave(photos, initial);
-          }}
-        />
-      </View>
-    </TouchableWithoutFeedback>
+      <NewSpotSheetScreen
+        name={edit.name}
+        atmosphere={edit.atmosphere}
+        dateScore={edit.dateScore}
+        notes={edit.notes}
+        vibe={edit.vibe}
+        price={edit.price}
+        bestFor={edit.bestFor}
+        wouldReturn={edit.wouldReturn}
+        title="Edit Date Spot"
+        photos={photos}
+        selectedTaggedUsers={edit.selectedTaggedUsers}
+        eligibleTagUsers={edit.eligibleTagUsers}
+        tagUsersLoading={edit.tagUsersLoading}
+        debugLabel="(EDIT)"
+        enableFullscreenPreview
+        setPhotos={setPhotos}
+        onChangeName={edit.setName}
+        onChangeAtmosphere={(v) => edit.setAtmosphere(sanitizeOneToTenInput(v))}
+        onChangeDateScore={(v) => edit.setDateScore(sanitizeOneToTenInput(v))}
+        onChangeNotes={edit.setNotes}
+        onChangeVibe={edit.setVibe}
+        onChangePrice={edit.setPrice}
+        onChangeBestFor={edit.setBestFor}
+        onChangeWouldReturn={edit.setWouldReturn}
+        onChangeTaggedUsers={edit.setSelectedTaggedUsers}
+        onCancel={() => {
+          setPhotos([]);
+          initialPhotosRef.current = null;
+          edit.onCancel();
+        }}
+        onSave={() => {
+          const initial = initialPhotosRef.current ?? [];
+          return edit.onSave(photos, initial);
+        }}
+      />
+    </View>
   );
 }

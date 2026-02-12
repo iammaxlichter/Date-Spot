@@ -100,4 +100,13 @@ export const s = StyleSheet.create({
 
   notes: { fontSize: 13, lineHeight: 18, color: "#222" },
   link: { marginTop: 8, fontSize: 13, fontWeight: "800", color: "#111" },
+  wentWithRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+  },
+  wentWithUser: {
+    fontSize: 13,
+    color: "#1b5fc6",
+    fontWeight: "700",
+  },
 });

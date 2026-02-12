@@ -31,6 +31,7 @@ export function NewSpotSheetScreen({
   photos,
   debugLabel,
   setPhotos,
+  enableFullscreenPreview,
   onChangeName,
   onChangeAtmosphere,
   onChangeDateScore,
@@ -96,7 +97,12 @@ export function NewSpotSheetScreen({
             onSubmitEditing={Keyboard.dismiss}
           />
 
-          <SpotPhotosPicker photos={photos} setPhotos={setPhotos} debugLabel="(CREATE)" />
+          <SpotPhotosPicker
+            photos={photos}
+            setPhotos={setPhotos}
+            debugLabel={debugLabel}
+            enableFullscreenPreview={enableFullscreenPreview}
+          />
 
           <View style={styles.row}>
             <View style={{ flex: 1, marginRight: 6 }}>

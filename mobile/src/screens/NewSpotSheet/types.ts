@@ -17,6 +17,7 @@ export type Props = {
   
   photos: SpotPhotoItem[];
   setPhotos: React.Dispatch<React.SetStateAction<SpotPhotoItem[]>>;
+  enableFullscreenPreview?: boolean;
 
   debugLabel?: string;
   

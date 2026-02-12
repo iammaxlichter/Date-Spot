@@ -62,9 +62,6 @@ export async function fetchSpotPhotosWithSignedUrls(params: {
 }): Promise<ExistingSpotPhoto[]> {
     const { spotId, expiresInSeconds = 3600 } = params;
 
-    console.log("[spotPhotos] fetch start");
-    console.log("[spotPhotos] spotId:", spotId);
-
     const { data, error } = await supabase
         .from("spot_photos")
         .select("id, path, position, created_at")
@@ -79,13 +76,9 @@ export async function fetchSpotPhotosWithSignedUrls(params: {
 
     const rows = (data ?? []) as Array<SpotPhotoRow & { created_at: string }>;
 
-    console.log("[spotPhotos] rows from DB:", rows);
-
     const paths = rows.map((r) => r.path);
-    console.log("[spotPhotos] storage paths:", paths);
 
     if (paths.length === 0) {
-        console.log("[spotPhotos] no photos found for this spot");
         return [];
     }
 
@@ -97,8 +90,6 @@ export async function fetchSpotPhotosWithSignedUrls(params: {
         console.error("[spotPhotos] signed URL error:", signedErr);
         throw signedErr;
     }
-
-    console.log("[spotPhotos] signedData:", signedData);
 
     const signedUrlByPath = new Map<string, string>();
     for (const item of signedData ?? []) {
@@ -117,8 +108,6 @@ export async function fetchSpotPhotosWithSignedUrls(params: {
         signedUrl: signedUrlByPath.get(r.path) ?? "",
     }));
 
-    console.log("[spotPhotos] final result:", result);
-
     return result;
 }
 
@@ -134,6 +123,10 @@ export async function syncSpotPhotosOnEdit(params: {
     initialPhotos: SpotPhotoItem[];
 }): Promise<void> {
     const { spotId, currentPhotos, initialPhotos } = params;
+    const { data: userRes, error: userErr } = await supabase.auth.getUser();
+    if (userErr) throw userErr;
+    if (!userRes.user) throw new Error("Not authenticated");
+    const userId = userRes.user.id;
 
     // --- Removed photos (existing in initial, not present in current) ---
     const initialExisting = initialPhotos.filter(isExisting);
@@ -145,8 +138,6 @@ export async function syncSpotPhotosOnEdit(params: {
     if (removed.length > 0) {
         const removedPaths = removed.map((p) => p.path);
 
-        console.log("[spotPhotos] removing storage paths:", removedPaths);
-
         const { error: storageErr } = await supabase.storage
             .from(BUCKET)
             .remove(removedPaths);
@@ -157,8 +148,6 @@ export async function syncSpotPhotosOnEdit(params: {
         }
 
         const removedIds = removed.map((p) => p.id);
-
-        console.log("[spotPhotos] deleting DB rows:", removedIds);
 
         const { error: dbDelErr } = await supabase
             .from("spot_photos")
@@ -186,7 +175,7 @@ export async function syncSpotPhotosOnEdit(params: {
 
         const ext = extFromUri(uri);
         const filename = `${Date.now()}-${idx}.${ext}`;
-        const storagePath = `${spotId}/${filename}`;
+        const storagePath = `${userId}/${spotId}/${filename}`;
 
         const bytes = await uriToUint8Array(uri);
 
@@ -209,6 +198,7 @@ export async function syncSpotPhotosOnEdit(params: {
             .from("spot_photos")
             .insert({
                 spot_id: spotId,
+                user_id: userId,
                 path: storagePath,
                 position: 0,
             })
@@ -255,16 +245,19 @@ export async function syncSpotPhotosOnEdit(params: {
     }
 
     if (orderedDbItems.length > 0) {
-        console.log("[spotPhotos] updating positions:", orderedDbItems);
+        // Use UPDATE (not UPSERT) to avoid triggering insert-path RLS checks.
+        for (const item of orderedDbItems) {
+            const { error: posErr } = await supabase
+                .from("spot_photos")
+                .update({ position: item.position })
+                .eq("id", item.id)
+                .eq("spot_id", spotId)
+                .eq("user_id", userId);
 
-        // Batch upsert by id (updates position)
-        const { error: posErr } = await supabase
-            .from("spot_photos")
-            .upsert(orderedDbItems, { onConflict: "id" });
-
-        if (posErr) {
-            console.error("[spotPhotos] position upsert error:", posErr);
-            throw posErr;
+            if (posErr) {
+                console.error("[spotPhotos] position update error:", posErr);
+                throw posErr;
+            }
         }
     }
 }

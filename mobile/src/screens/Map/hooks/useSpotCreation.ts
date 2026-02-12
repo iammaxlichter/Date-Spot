@@ -50,20 +50,11 @@ async function uploadSpotPhotos(args: {
 }) {
   const { spotId, userId, photos } = args;
 
-  console.log('📸 Starting photo upload');
-  console.log('   spotId:', spotId);
-  console.log('   userId:', userId);
-  console.log('   photo count:', photos.length);
-
   for (let i = 0; i < photos.length; i++) {
     const photo = photos[i];
 
     const fileExt = photo.mimeType === "image/png" ? "png" : "jpg";
     const path = `${userId}/${spotId}/${photo.id}.${fileExt}`;
-
-    console.log(`   📤 Photo ${i + 1}: Uploading to path:`, path);
-    console.log('      URI:', photo.uri);
-    console.log('      MIME type:', photo.mimeType);
 
     try {
       // 1) Read local file:// as base64
@@ -71,12 +62,8 @@ async function uploadSpotPhotos(args: {
         encoding: "base64",
       });
 
-      console.log('      Base64 length:', base64.length);
-
       // 2) Convert base64 -> Uint8Array (safe for RN/Expo)
       const bytes = base64ToUint8Array(base64);
-
-      console.log('      File size:', bytes.length, 'bytes');
 
       // 3) Upload to Supabase Storage
       const { data, error: uploadError } = await supabase.storage
@@ -91,9 +78,6 @@ async function uploadSpotPhotos(args: {
         console.error('      Error details:', JSON.stringify(uploadError, null, 2));
         continue; // don't abort everything
       }
-
-      console.log('      ✅ Upload success:', data?.path);
-
       // 4) Insert DB row
       const { error: dbError } = await supabase.from("spot_photos").insert({
         spot_id: spotId,
@@ -104,15 +88,12 @@ async function uploadSpotPhotos(args: {
 
       if (dbError) {
         console.error('      ❌ DB insert failed:', dbError);
-      } else {
-        console.log('      ✅ DB insert success');
       }
     } catch (err) {
       console.error('      ❌ Photo processing failed:', err);
     }
   }
 
-  console.log('✅ Photo upload process complete');
 }
 
 /* ============================================================

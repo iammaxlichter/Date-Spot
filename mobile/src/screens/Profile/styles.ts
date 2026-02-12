@@ -128,7 +128,7 @@ export const s = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "flex-start",
-    marginBottom: 10,
+    marginBottom: 8,
   },
   spotName: {
     fontSize: 16,
@@ -140,6 +140,17 @@ export const s = StyleSheet.create({
   spotTime: {
     fontSize: 12,
     color: "#777",
+  },
+  spotPhotoRow: {
+    flexDirection: "row",
+    gap: 8,
+    marginBottom: 10,
+  },
+  spotPhotoThumb: {
+    width: 64,
+    height: 64,
+    borderRadius: 10,
+    backgroundColor: "rgba(0,0,0,0.06)",
   },
   spotMetrics: {
     flexDirection: "row",

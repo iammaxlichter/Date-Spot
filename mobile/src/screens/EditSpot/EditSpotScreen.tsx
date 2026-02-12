@@ -36,7 +36,6 @@ export default function EditSpotScreen({ route, navigation }: any) {
         const existing = await fetchSpotPhotosWithSignedUrls({ spotId });
         if (cancelled) return;
 
-        console.log("[EditSpotScreen] setPhotos(existing) called");
         setPhotos(existing);
 
         // Snapshot the initial state ONCE (used for diffing removals)
@@ -75,6 +74,7 @@ export default function EditSpotScreen({ route, navigation }: any) {
           title="Edit Date Spot"
           photos={photos}
           debugLabel="(EDIT)"
+          enableFullscreenPreview
           setPhotos={setPhotos}
           onChangeName={edit.setName}
           onChangeAtmosphere={(v) => edit.setAtmosphere(sanitizeOneToTenInput(v))}

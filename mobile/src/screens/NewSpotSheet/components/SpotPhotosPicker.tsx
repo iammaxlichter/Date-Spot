@@ -1,6 +1,6 @@
 // src/screens/NewSpotSheet/components/SpotPhotosPicker.tsx
 import * as React from "react";
-import { Alert, Image, Pressable, Text, View } from "react-native";
+import { Alert, Image, Modal, Pressable, Text, View } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import * as ImageManipulator from "expo-image-manipulator";
 
@@ -10,6 +10,7 @@ export type SpotPhotosPickerValue = {
     photos: SpotPhotoItem[];
     setPhotos: React.Dispatch<React.SetStateAction<SpotPhotoItem[]>>;
     editable?: boolean;
+    enableFullscreenPreview?: boolean;
     debugLabel?: string;
 };
 
@@ -56,9 +57,15 @@ async function compressIfNeeded(
 }
 
 export function SpotPhotosPicker(props: SpotPhotosPickerValue) {
-  const { photos: rawPhotos, setPhotos, editable = true, debugLabel } = props;
+    const {
+    photos: rawPhotos,
+    setPhotos,
+    editable = true,
+    enableFullscreenPreview = false,
+    debugLabel,
+  } = props;
     const photos = rawPhotos ?? [];
-    console.log(`[SpotPhotosPicker${debugLabel ? ` ${debugLabel}` : ''}] photos prop:`, photos);
+    const [openUri, setOpenUri] = React.useState<string | null>(null);
 
     const onAddPhotos = React.useCallback(async () => {
         if (!editable) return;
@@ -184,15 +191,29 @@ export function SpotPhotosPicker(props: SpotPhotosPickerValue) {
 
                         return (
                             <View key={p.id} style={{ position: "relative" }}>
-                                <Image
-                                    source={{ uri }}
-                                    style={{
-                                        width: 92,
-                                        height: 92,
-                                        borderRadius: 12,
-                                        backgroundColor: "rgba(0,0,0,0.06)",
-                                    }}
-                                />
+                                {enableFullscreenPreview ? (
+                                    <Pressable onPress={() => setOpenUri(uri)}>
+                                        <Image
+                                            source={{ uri }}
+                                            style={{
+                                                width: 92,
+                                                height: 92,
+                                                borderRadius: 12,
+                                                backgroundColor: "rgba(0,0,0,0.06)",
+                                            }}
+                                        />
+                                    </Pressable>
+                                ) : (
+                                    <Image
+                                        source={{ uri }}
+                                        style={{
+                                            width: 92,
+                                            height: 92,
+                                            borderRadius: 12,
+                                            backgroundColor: "rgba(0,0,0,0.06)",
+                                        }}
+                                    />
+                                )}
 
                                 {editable && (
                                     <Pressable
@@ -218,6 +239,48 @@ export function SpotPhotosPicker(props: SpotPhotosPickerValue) {
                     })}
                 </View>
             )}
+
+            <Modal
+                visible={!!openUri}
+                transparent
+                animationType="fade"
+                onRequestClose={() => setOpenUri(null)}
+            >
+                <View
+                    style={{
+                        flex: 1,
+                        backgroundColor: "rgba(0,0,0,0.95)",
+                        justifyContent: "center",
+                        alignItems: "center",
+                        padding: 16,
+                    }}
+                >
+                    <Pressable
+                        onPress={() => setOpenUri(null)}
+                        style={{
+                            position: "absolute",
+                            top: 56,
+                            right: 18,
+                            borderWidth: 1,
+                            borderColor: "rgba(255,255,255,0.35)",
+                            borderRadius: 999,
+                            paddingHorizontal: 12,
+                            paddingVertical: 7,
+                            backgroundColor: "rgba(0,0,0,0.45)",
+                        }}
+                    >
+                        <Text style={{ color: "#fff", fontSize: 13, fontWeight: "700" }}>Close</Text>
+                    </Pressable>
+
+                    {openUri ? (
+                        <Image
+                            source={{ uri: openUri }}
+                            resizeMode="contain"
+                            style={{ width: "100%", height: "80%" }}
+                        />
+                    ) : null}
+                </View>
+            </Modal>
         </View>
     );
 }

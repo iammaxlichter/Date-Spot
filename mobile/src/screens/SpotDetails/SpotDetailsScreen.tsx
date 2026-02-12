@@ -6,6 +6,7 @@ import { s } from "./styles";
 import { useSpotDetails } from "./hooks/useSpotDetails";
 import { SpotDetailsLoading } from "./components/SpotDetailsLoading";
 import { SpotHeader } from "./components/SpotDetailsHeader";
+import { SpotDetailsPhotos } from "./components/SpotDetailsPhotos";
 import { SpotStats } from "./components/SpotDetailsStats";
 import { SpotTags } from "./components/SpotDetailsTags";
 import { SpotNotes } from "./components/SpotDetailsNotes";
@@ -37,6 +38,7 @@ export default function SpotDetailsScreen({ route }: any) {
         />
 
         <Text style={s.title}>{d.spot.name}</Text>
+        <SpotDetailsPhotos photos={d.photos} enableFullscreen />
 
         <SpotStats
           atmosphere={d.spot.atmosphere}

@@ -1,5 +1,14 @@
 import { supabase } from "../../../services/supabase/client";
 
+const SPOT_PHOTOS_BUCKET = "spot-photos";
+
+export type SpotPhotoPreview = {
+  id: string;
+  path: string;
+  position: number;
+  signedUrl: string;
+};
+
 export type ProfileRow = {
   id: string;
   name: string | null;
@@ -38,6 +47,7 @@ export type SpotRow = {
   price: string | null;
   best_for: string | null;
   would_return: boolean;
+  photos: SpotPhotoPreview[];
 };
 
 export async function getMyAcceptedPartnership(myId: string): Promise<PartnershipRow | null> {
@@ -99,7 +109,68 @@ export async function fetchUserSpots(userId: string): Promise<SpotRow[]> {
     throw error;
   }
 
-  return (data as SpotRow[]) ?? [];
+  const spots = (data as Omit<SpotRow, "photos">[]) ?? [];
+  if (!spots.length) return [];
+
+  const spotIds = spots.map((s) => s.id);
+
+  const { data: photoRows, error: photosErr } = await supabase
+    .from("spot_photos")
+    .select("id,spot_id,path,position,created_at")
+    .eq("user_id", userId)
+    .in("spot_id", spotIds)
+    .order("position", { ascending: true })
+    .order("created_at", { ascending: true });
+
+  if (photosErr) {
+    console.error("Error fetching spot photos:", photosErr);
+    return spots.map((s) => ({ ...s, photos: [] }));
+  }
+
+  const rows =
+    (photoRows as Array<{
+      id: string;
+      spot_id: string;
+      path: string;
+      position: number;
+      created_at: string;
+    }>) ?? [];
+
+  const paths = rows.map((r) => r.path);
+  const signedByPath = new Map<string, string>();
+
+  if (paths.length > 0) {
+    const { data: signedData, error: signedErr } = await supabase.storage
+      .from(SPOT_PHOTOS_BUCKET)
+      .createSignedUrls(paths, 3600);
+
+    if (signedErr) {
+      console.error("Error creating signed photo URLs:", signedErr);
+    } else {
+      for (const item of signedData ?? []) {
+        if (item?.path && item?.signedUrl) {
+          signedByPath.set(item.path, item.signedUrl);
+        }
+      }
+    }
+  }
+
+  const photosBySpot = new Map<string, SpotPhotoPreview[]>();
+  for (const r of rows) {
+    const list = photosBySpot.get(r.spot_id) ?? [];
+    list.push({
+      id: r.id,
+      path: r.path,
+      position: r.position,
+      signedUrl: signedByPath.get(r.path) ?? "",
+    });
+    photosBySpot.set(r.spot_id, list);
+  }
+
+  return spots.map((s) => ({
+    ...s,
+    photos: (photosBySpot.get(s.id) ?? []).filter((p) => !!p.signedUrl),
+  }));
 }
 
 export function timeAgo(iso: string) {

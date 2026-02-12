@@ -1,4 +1,3 @@
-pictures for datespots
 leaderboard
 total ratings per datespots
 you can see people you follow datespots (if allowed)

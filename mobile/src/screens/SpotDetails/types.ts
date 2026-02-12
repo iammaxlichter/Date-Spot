@@ -6,6 +6,13 @@ export type ProfileMini = {
   avatar_url: string | null;
 };
 
+export type TaggedUserMini = {
+  id: string;
+  username: string | null;
+  avatar_url: string | null;
+  name: string | null;
+};
+
 export type SpotFull = {
   id: string;
   created_at: string;
@@ -21,4 +28,5 @@ export type SpotFull = {
   would_return: boolean;
 
   profiles: ProfileMini | null;
+  tagged_users?: TaggedUserMini[];
 };

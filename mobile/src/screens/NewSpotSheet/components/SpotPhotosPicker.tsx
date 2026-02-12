@@ -1,6 +1,6 @@
 // src/screens/NewSpotSheet/components/SpotPhotosPicker.tsx
 import * as React from "react";
-import { Alert, Image, Modal, Pressable, Text, View } from "react-native";
+import { Alert, Image, Modal, Pressable, Text, View, StyleSheet } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import * as ImageManipulator from "expo-image-manipulator";
 
@@ -153,14 +153,7 @@ export function SpotPhotosPicker(props: SpotPhotosPickerValue) {
 
     return (
         <View style={{ marginTop: 10, marginBottom: 12 }}>
-            <View
-                style={{
-                    flexDirection: "row",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    marginBottom: 8,
-                }}
-            >
+            <View style={s.headerRow}>
                 <Text style={{ fontWeight: "700", fontSize: 14 }}>Photos</Text>
 
                 <Pressable
@@ -284,3 +277,13 @@ export function SpotPhotosPicker(props: SpotPhotosPickerValue) {
         </View>
     );
 }
+
+const s = StyleSheet.create({
+    headerRow: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-between",
+        marginBottom: 8,
+        paddingBottom: 10,
+    },
+});

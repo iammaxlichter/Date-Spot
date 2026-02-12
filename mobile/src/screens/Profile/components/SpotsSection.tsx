@@ -8,9 +8,10 @@ export function SpotsSection(props: {
   spots: SpotRow[];
   spotsLoading: boolean;
   onPressSpot: (spotId: string) => void;
+  onPressTaggedUser: (userId: string) => void;
   timeAgo: (iso: string) => string;
 }) {
-  const { spots, spotsLoading, onPressSpot, timeAgo } = props;
+  const { spots, spotsLoading, onPressSpot, onPressTaggedUser, timeAgo } = props;
 
   return (
     <View style={{ width: "100%", paddingHorizontal: 24, marginTop: 12 }}>
@@ -28,7 +29,11 @@ export function SpotsSection(props: {
       ) : spots.length > 0 ? (
         spots.map((spot) => (
           <Pressable key={spot.id} onPress={() => onPressSpot(spot.id)}>
-            <SpotCard spot={spot} timeAgo={timeAgo} />
+            <SpotCard
+              spot={spot}
+              timeAgo={timeAgo}
+              onPressTaggedUser={onPressTaggedUser}
+            />
           </Pressable>
         ))
       ) : (

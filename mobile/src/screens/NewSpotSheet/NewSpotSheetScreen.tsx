@@ -5,18 +5,18 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  TouchableWithoutFeedback,
   Keyboard,
   ScrollView,
 } from "react-native";
 import { styles } from "./styles";
 import { sanitizeOneToTenInput } from "../../app/utils/numberInputValidation";
 import type { Price, BestFor, VibePreset } from "../../types/datespot";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import type { TaggedUser } from "../../services/api/spotTags";
 
 import type { Props } from "./types";
 import { Chip } from "./components/Chip";
 import { SpotPhotosPicker } from "./components/SpotPhotosPicker";
+import { TagPeoplePicker } from "./components/TagPeoplePicker";
 
 export function NewSpotSheetScreen({
   name,
@@ -32,6 +32,9 @@ export function NewSpotSheetScreen({
   debugLabel,
   setPhotos,
   enableFullscreenPreview,
+  selectedTaggedUsers,
+  eligibleTagUsers,
+  tagUsersLoading,
   onChangeName,
   onChangeAtmosphere,
   onChangeDateScore,
@@ -40,6 +43,7 @@ export function NewSpotSheetScreen({
   onChangePrice,
   onChangeBestFor,
   onChangeWouldReturn,
+  onChangeTaggedUsers,
   onCancel,
   onSave,
 }: Props) {
@@ -61,7 +65,6 @@ export function NewSpotSheetScreen({
     "No $",
   ];
   const bestFors: BestFor[] = ["Day", "Night", "Sunrise", "Sunset", "Any"];
-  const insets = useSafeAreaInsets();
 
   const isPresetVibe = (v: string | null) =>
     !!v && vibePresets.includes(v as VibePreset);
@@ -73,18 +76,29 @@ export function NewSpotSheetScreen({
   const [isCustomVibe, setIsCustomVibe] = React.useState<boolean>(
     !!vibe && !isPresetVibe(vibe)
   );
+  const [tagPickerOpen, setTagPickerOpen] = React.useState(false);
 
-  
+  const removeTaggedUser = (userId: string) => {
+    onChangeTaggedUsers(selectedTaggedUsers.filter((user) => user.id !== userId));
+  };
 
+  const toggleTaggedUser = (user: TaggedUser) => {
+    const exists = selectedTaggedUsers.some((u) => u.id === user.id);
+    if (exists) {
+      onChangeTaggedUsers(selectedTaggedUsers.filter((u) => u.id !== user.id));
+    } else {
+      onChangeTaggedUsers([...selectedTaggedUsers, user]);
+    }
+  };
 
   return (
-    <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-      <View style={styles.bottomSheet}>
-        <ScrollView
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ paddingBottom: 24 }}
-        >
+    <View style={styles.bottomSheet}>
+      <ScrollView
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: 24 }}
+      >
           <Text style={styles.sheetTitle}>{title ?? "New Date Spot"}</Text>
 
           <Text style={styles.label}>Name</Text>
@@ -103,6 +117,40 @@ export function NewSpotSheetScreen({
             debugLabel={debugLabel}
             enableFullscreenPreview={enableFullscreenPreview}
           />
+
+          <View style={styles.tagPeopleSection}>
+            <View style={styles.tagPeopleHeaderRow}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.tagPeopleTitle}>Went with</Text>
+                <Text style={styles.tagPeopleSubtext}>Tag mutuals you follow</Text>
+              </View>
+              <TouchableOpacity
+                style={styles.tagPeopleAddBtn}
+                onPress={() => setTagPickerOpen(true)}
+              >
+                <Text style={styles.tagPeopleAddBtnText}>Add people</Text>
+              </TouchableOpacity>
+            </View>
+
+            {selectedTaggedUsers.length > 0 ? (
+              <View style={styles.tagPeopleChipsWrap}>
+                {selectedTaggedUsers.map((user) => (
+                  <View key={user.id} style={styles.taggedChip}>
+                    <Text style={styles.taggedChipText}>@{user.username ?? "unknown"}</Text>
+                    <TouchableOpacity
+                      onPress={() => removeTaggedUser(user.id)}
+                      hitSlop={8}
+                      style={styles.taggedChipRemoveBtn}
+                    >
+                      <Text style={styles.taggedChipRemoveText}>x</Text>
+                    </TouchableOpacity>
+                  </View>
+                ))}
+              </View>
+            ) : (
+              <Text style={styles.tagPeopleEmpty}>No people tagged yet.</Text>
+            )}
+          </View>
 
           <View style={styles.row}>
             <View style={{ flex: 1, marginRight: 6 }}>
@@ -253,8 +301,16 @@ export function NewSpotSheetScreen({
               <Text style={styles.saveText}>Save</Text>
             </TouchableOpacity>
           </View>
-        </ScrollView>
-      </View>
-    </TouchableWithoutFeedback>
+      </ScrollView>
+
+      <TagPeoplePicker
+        visible={tagPickerOpen}
+        loading={tagUsersLoading}
+        users={eligibleTagUsers}
+        selectedIds={selectedTaggedUsers.map((u) => u.id)}
+        onClose={() => setTagPickerOpen(false)}
+        onToggleSelect={toggleTaggedUser}
+      />
+    </View>
   );
 }

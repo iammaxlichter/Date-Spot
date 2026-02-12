@@ -1,4 +1,5 @@
 import { supabase } from "../../../services/supabase/client";
+import { fetchSpotTagsForSpotIds, type TaggedUser } from "../../../services/api/spotTags";
 
 const SPOT_PHOTOS_BUCKET = "spot-photos";
 
@@ -48,6 +49,7 @@ export type SpotRow = {
   best_for: string | null;
   would_return: boolean;
   photos: SpotPhotoPreview[];
+  tagged_users: TaggedUser[];
 };
 
 export async function getMyAcceptedPartnership(myId: string): Promise<PartnershipRow | null> {
@@ -109,22 +111,25 @@ export async function fetchUserSpots(userId: string): Promise<SpotRow[]> {
     throw error;
   }
 
-  const spots = (data as Omit<SpotRow, "photos">[]) ?? [];
+  const spots = (data as Omit<SpotRow, "photos" | "tagged_users">[]) ?? [];
   if (!spots.length) return [];
 
   const spotIds = spots.map((s) => s.id);
 
-  const { data: photoRows, error: photosErr } = await supabase
-    .from("spot_photos")
-    .select("id,spot_id,path,position,created_at")
-    .eq("user_id", userId)
-    .in("spot_id", spotIds)
-    .order("position", { ascending: true })
-    .order("created_at", { ascending: true });
+  const [{ data: photoRows, error: photosErr }, tagsBySpot] = await Promise.all([
+    supabase
+      .from("spot_photos")
+      .select("id,spot_id,path,position,created_at")
+      .eq("user_id", userId)
+      .in("spot_id", spotIds)
+      .order("position", { ascending: true })
+      .order("created_at", { ascending: true }),
+    fetchSpotTagsForSpotIds(spotIds),
+  ]);
 
   if (photosErr) {
     console.error("Error fetching spot photos:", photosErr);
-    return spots.map((s) => ({ ...s, photos: [] }));
+    return spots.map((s) => ({ ...s, photos: [], tagged_users: tagsBySpot[s.id] ?? [] }));
   }
 
   const rows =
@@ -170,6 +175,7 @@ export async function fetchUserSpots(userId: string): Promise<SpotRow[]> {
   return spots.map((s) => ({
     ...s,
     photos: (photosBySpot.get(s.id) ?? []).filter((p) => !!p.signedUrl),
+    tagged_users: tagsBySpot[s.id] ?? [],
   }));
 }
 

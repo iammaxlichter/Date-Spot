@@ -23,13 +23,16 @@ import { SpotsMap } from "./components/SpotsMap";
 import type { Spot } from "../../services/api/spots";
 import { getNearbySpots } from "../../services/api/spots";
 import type { SpotPhotoItem } from "../../types/spotPhotos";
-
+import { supabase } from "../../services/supabase/client";
+import { fetchEligibleTagUsers, type TaggedUser } from "../../services/api/spotTags";
 
 export default function MapScreen({ navigation }: any) {
   const mapRef = useRef<MapView | null>(null);
   const { setIsCreatingSpot } = useSpotCreationContext();
   const [photos, setPhotos] = React.useState<SpotPhotoItem[]>([]);
-
+  const [selectedTaggedUsers, setSelectedTaggedUsers] = React.useState<TaggedUser[]>([]);
+  const [eligibleTagUsers, setEligibleTagUsers] = React.useState<TaggedUser[]>([]);
+  const [tagUsersLoading, setTagUsersLoading] = React.useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -39,7 +42,6 @@ export default function MapScreen({ navigation }: any) {
       };
     }, [setIsCreatingSpot])
   );
-
 
   const { region, setRegion, loading, permissionDenied, spots, setSpots } =
     useInitialRegionAndSpots();
@@ -74,7 +76,36 @@ export default function MapScreen({ navigation }: any) {
     },
   });
 
-  // ✅ Update the context whenever spot creation state changes
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadEligibleUsers = async () => {
+      if (!spotCreation.showNewSpotSheet) return;
+      try {
+        setTagUsersLoading(true);
+        const { data: auth, error } = await supabase.auth.getUser();
+        if (error) throw error;
+        const myId = auth.user?.id;
+        if (!myId) return;
+
+        const users = await fetchEligibleTagUsers(myId);
+        if (!cancelled) setEligibleTagUsers(users);
+      } catch (e) {
+        console.error("[map] failed to load eligible tag users:", e);
+        if (!cancelled) setEligibleTagUsers([]);
+      } finally {
+        if (!cancelled) setTagUsersLoading(false);
+      }
+    };
+
+    void loadEligibleUsers();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [spotCreation.showNewSpotSheet]);
+
+  // Update the context whenever spot creation state changes
   useEffect(() => {
     const isCreating = spotCreation.isPlacingPin || spotCreation.showNewSpotSheet;
     setIsCreatingSpot(isCreating);
@@ -137,7 +168,7 @@ export default function MapScreen({ navigation }: any) {
         <Text>Loading map…</Text>
       </View>
     );
-  };
+  }
 
   return (
     <View style={{ flex: 1 }}>
@@ -196,6 +227,9 @@ export default function MapScreen({ navigation }: any) {
           wouldReturn={spotCreation.draft.wouldReturn}
           photos={photos}
           setPhotos={setPhotos}
+          selectedTaggedUsers={selectedTaggedUsers}
+          eligibleTagUsers={eligibleTagUsers}
+          tagUsersLoading={tagUsersLoading}
           debugLabel="(CREATE)"
           onChangeName={(v) => spotCreation.setField("name", v)}
           onChangeAtmosphere={(v) => spotCreation.setField("atmosphere", v)}
@@ -205,13 +239,19 @@ export default function MapScreen({ navigation }: any) {
           onChangePrice={(v) => spotCreation.setField("price", v)}
           onChangeBestFor={(v) => spotCreation.setField("bestFor", v)}
           onChangeWouldReturn={(v) => spotCreation.setField("wouldReturn", v)}
+          onChangeTaggedUsers={setSelectedTaggedUsers}
           onCancel={() => {
             setPhotos([]);
+            setSelectedTaggedUsers([]);
             spotCreation.cancelNewSpot();
           }}
           onSave={async () => {
-            await spotCreation.saveNewSpot(photos.filter((p) => p.kind === "local"));
+            await spotCreation.saveNewSpot(
+              photos.filter((p) => p.kind === "local"),
+              selectedTaggedUsers.map((u) => u.id)
+            );
             setPhotos([]);
+            setSelectedTaggedUsers([]);
           }}
         />
       )}

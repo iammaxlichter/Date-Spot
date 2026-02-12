@@ -4,6 +4,7 @@ import { Alert, ImageSourcePropType } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import { supabase } from "../../../services/supabase/client";
 import { fetchSpotPhotosWithSignedUrls } from "../../../services/api/spotPhotosService";
+import { fetchSpotTags } from "../../../services/api/spotTags";
 import type { ExistingSpotPhoto } from "../../../types/spotPhotos";
 import type { SpotFull } from "../types";
 
@@ -58,7 +59,9 @@ export function useSpotDetails(args: { spotId: string; navigation: any }) {
 
       if (error) throw error;
 
-      setSpot(data as unknown as SpotFull);
+      const baseSpot = (data as unknown) as SpotFull;
+      const tags = await fetchSpotTags(spotId);
+      setSpot({ ...baseSpot, tagged_users: tags });
 
       try {
         const loadedPhotos = await fetchSpotPhotosWithSignedUrls({ spotId });
@@ -117,6 +120,17 @@ export function useSpotDetails(args: { spotId: string; navigation: any }) {
     }
   }, [currentUserId, navigation, spot]);
 
+  const onTaggedUserPress = React.useCallback(
+    (userId: string) => {
+      if (userId === currentUserId) {
+        navigation.navigate("Profile");
+      } else {
+        navigation.navigate("UserProfile", { userId });
+      }
+    },
+    [currentUserId, navigation]
+  );
+
   const timeAgoText = spot ? `${timeAgo(spot.created_at)} ago` : "";
 
   return {
@@ -132,6 +146,7 @@ export function useSpotDetails(args: { spotId: string; navigation: any }) {
     shortNotes,
     onEdit,
     onProfilePress,
+    onTaggedUserPress,
     timeAgoText,
   };
 }

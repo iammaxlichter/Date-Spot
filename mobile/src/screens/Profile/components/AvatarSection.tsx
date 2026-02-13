@@ -27,8 +27,6 @@ export function AvatarSection(props: {
         )}
       </Pressable>
 
-      <Text style={s.hint}>Tap your picture to change it</Text>
-
       {username ? <Text style={s.username}>@{username}</Text> : null}
 
       <Pressable onPress={onPressName}>

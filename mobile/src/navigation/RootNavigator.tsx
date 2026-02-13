@@ -16,8 +16,9 @@ import UserProfileScreen from "../screens/UserProfileScreen/UserProfileScreen";
 import FeedScreen from "../screens/Feed/FeedScreen";
 import SpotDetailsScreen from "../screens/SpotDetails/SpotDetailsScreen";
 import EditSpotScreen from "../screens/EditSpot/EditSpotScreen";
+import SettingsScreen from "../screens/Settings/SettingsScreen";
+import EditProfileScreen from "../screens/EditProfile/EditProfileScreen";
 
-import { supabase } from "../services/supabase/client";
 import {
   SpotCreationProvider,
   useSpotCreation,
@@ -35,6 +36,7 @@ function NavigatorContent() {
   const { session, booting } = useAuthSession();
   const [activeRoute, setActiveRoute] = React.useState<string>("Feed");
   const { isCreatingSpot, isEditingSpot } = useSpotCreation();
+  const showBottomOverlay = activeRoute === "Feed" || activeRoute === "Search" || activeRoute === "Profile";
 
   if (booting) {
     return (
@@ -73,22 +75,40 @@ function NavigatorContent() {
               <Stack.Screen
                 name="Profile"
                 component={ProfileScreen}
-                options={{
+                options={({ navigation }) => ({
                   title: "Profile",
                   headerShadowVisible: false,
                   headerBackTitle: "",
                   headerRight: () => (
                     <TouchableOpacity
-                      onPress={async () => {
-                        await supabase.auth.signOut();
-                      }}
+                      onPress={() => navigation.navigate("Settings")}
                       style={{ paddingHorizontal: 8, paddingVertical: 6 }}
                     >
-                      <Text style={{ color: "red", fontWeight: "600" }}>
-                        Logout
+                      <Text style={{ color: "#111", fontWeight: "600" }}>
+                        Settings
                       </Text>
                     </TouchableOpacity>
                   ),
+                })}
+              />
+
+              <Stack.Screen
+                name="Settings"
+                component={SettingsScreen}
+                options={{
+                  title: "Settings",
+                  headerShadowVisible: false,
+                  headerBackTitle: "",
+                }}
+              />
+
+              <Stack.Screen
+                name="EditProfile"
+                component={EditProfileScreen}
+                options={{
+                  title: "Edit Profile",
+                  headerShadowVisible: false,
+                  headerBackTitle: "",
                 }}
               />
 
@@ -169,7 +189,7 @@ function NavigatorContent() {
           )}
         </Stack.Navigator>
 
-        {session && !isCreatingSpot && !isEditingSpot && (
+        {session && !isCreatingSpot && !isEditingSpot && showBottomOverlay && (
           <BottomOverlay
             activeRoute={activeRoute}
             onGoHome={() => {

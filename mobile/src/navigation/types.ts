@@ -5,6 +5,8 @@ export type RootStackParamList = {
   Feed: undefined;
   Home: undefined;
   Profile: undefined;
+  Settings: undefined;
+  EditProfile: undefined;
   Search: undefined;
   Followers: { userId: string };
   Following: { userId: string };

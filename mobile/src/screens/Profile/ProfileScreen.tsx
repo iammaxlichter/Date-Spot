@@ -1,10 +1,8 @@
 import React from "react";
 import { View, Alert, ScrollView, RefreshControl, ActivityIndicator } from "react-native";
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
-import * as ImagePicker from "expo-image-picker";
 
 import { supabase } from "../../services/supabase/client";
-import { uploadProfilePicture } from "../../services/supabase/uploadProfilePicture";
 
 import {
   fetchCounts,
@@ -20,7 +18,6 @@ import {
 
 import { s } from "./styles";
 import { AvatarSection } from "./components/AvatarSection";
-import { NameEditModal } from "./components/NameEditModal";
 import { StatsRow } from "./components/StatsRow";
 import { PartnerCard } from "./components/PartnerCard";
 import { PartnerMenuModal } from "./components/PartnerMenuModal";
@@ -32,13 +29,7 @@ export default function ProfileScreen() {
   const [loading, setLoading] = React.useState(true);
   const [refreshing, setRefreshing] = React.useState(false);
 
-  const [uploading, setUploading] = React.useState(false);
-
   const [profile, setProfile] = React.useState<ProfileRow | null>(null);
-
-  const [editOpen, setEditOpen] = React.useState(false);
-  const [nameDraft, setNameDraft] = React.useState("");
-  const [savingName, setSavingName] = React.useState(false);
 
   const [partner, setPartner] = React.useState<PartnerMini | null>(null);
   const [partnerLoading, setPartnerLoading] = React.useState(false);
@@ -163,112 +154,6 @@ export default function ProfileScreen() {
     }
   }, [loadProfile]);
 
-  const pickAndUploadAvatar = React.useCallback(async () => {
-    try {
-      setUploading(true);
-
-      const { data: userRes, error: userErr } = await supabase.auth.getUser();
-      if (userErr) throw userErr;
-      const user = userRes.user;
-      if (!user) throw new Error("Not authenticated");
-
-      const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (!perm.granted) {
-        Alert.alert("Permission needed", "Please allow photo library access.");
-        return;
-      }
-
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        quality: 0.9,
-        allowsEditing: true,
-        aspect: [1, 1],
-      });
-
-      if (result.canceled) return;
-      const asset = result.assets[0];
-
-      const { publicUrl } = await uploadProfilePicture({
-        userId: user.id,
-        uri: asset.uri,
-        mimeType: asset.mimeType ?? undefined,
-      });
-
-      const { data: updated, error: updateErr } = await supabase
-        .from("profiles")
-        .update({ avatar_url: publicUrl })
-        .eq("id", user.id)
-        .select("id,name,username,avatar_url,followers_count,following_count")
-        .single();
-
-      if (updateErr) throw updateErr;
-
-      const counts = await fetchCounts(user.id);
-      setProfile({
-        ...(updated as ProfileRow),
-        followers_count: counts.followers_count,
-        following_count: counts.following_count,
-      });
-
-      void supabase.from("profiles").update(counts).eq("id", user.id);
-    } catch (e: any) {
-      console.error(e);
-      Alert.alert("Upload failed", e?.message ?? "Could not update avatar.");
-    } finally {
-      setUploading(false);
-    }
-  }, []);
-
-  const openEditName = React.useCallback(() => {
-    if (!profile) return;
-    setNameDraft(profile.name ?? "");
-    setEditOpen(true);
-  }, [profile]);
-
-  const saveName = React.useCallback(async () => {
-    if (savingName) return;
-    try {
-      const next = nameDraft.trim();
-      if (!next) {
-        Alert.alert("Name required", "Please enter a name.");
-        return;
-      }
-
-      setSavingName(true);
-
-      const { data: userRes, error: userErr } = await supabase.auth.getUser();
-      if (userErr) throw userErr;
-      const user = userRes.user;
-      if (!user) throw new Error("Not authenticated");
-
-      const { data: updated, error: updateErr } = await supabase
-        .from("profiles")
-        .update({ name: next })
-        .eq("id", user.id)
-        .select("id,name,username,avatar_url,followers_count,following_count")
-        .single();
-
-      if (updateErr) throw updateErr;
-
-      setProfile((p) =>
-        p
-          ? {
-            ...(updated as ProfileRow),
-            followers_count: p.followers_count,
-            following_count: p.following_count,
-          }
-          : (updated as ProfileRow)
-      );
-
-      setEditOpen(false);
-    } catch (e: any) {
-      console.error(e);
-      Alert.alert("Update failed", e?.message ?? "Could not update name.");
-    } finally {
-      setSavingName(false);
-    }
-  }, [nameDraft, savingName]);
-
   const removePartner = React.useCallback(async () => {
     if (!partner) return;
     if (removingPartner) return;
@@ -370,12 +255,12 @@ export default function ProfileScreen() {
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
     >
       <AvatarSection
-        uploading={uploading}
+        uploading={false}
         avatarUrl={profile.avatar_url}
         username={profile.username}
         name={profile.name}
-        onPressAvatar={pickAndUploadAvatar}
-        onPressName={openEditName}
+        onPressAvatar={() => navigation.navigate("EditProfile")}
+        onPressName={() => navigation.navigate("EditProfile")}
       />
 
       {profile.username ? <View style={{ marginBottom: 10 }} /> : null}
@@ -406,15 +291,6 @@ export default function ProfileScreen() {
         timeAgo={timeAgo}
       />
 
-      <NameEditModal
-        visible={editOpen}
-        nameDraft={nameDraft}
-        savingName={savingName}
-        onChangeName={setNameDraft}
-        onClose={() => setEditOpen(false)}
-        onSave={saveName}
-      />
-
       <PartnerMenuModal
         visible={partnerMenuOpen}
         hasPartner={!!partner}
@@ -422,15 +298,6 @@ export default function ProfileScreen() {
         onClose={() => setPartnerMenuOpen(false)}
         onRemovePartner={removePartner}
       />
-
-      {/* Name press target (kept identical behavior: tap name to edit) */}
-      {/* We keep it here so layout stays the same: AvatarSection renders the name/username exactly */}
-      {/* But AvatarSection needs the name press handler. We'll pass it below by re-rendering name section. */}
-      {/* (We kept the visual styles unchanged; logic is still identical.) */}
-      {/* NOTE: AvatarSection already renders name + username + hint. */}
-      {/* We just need to allow editing name. */}
-      <View style={{ position: "absolute", left: -9999, top: -9999 }} />
-      {/* ^ no-op; layout unchanged */}
     </ScrollView>
   );
 }

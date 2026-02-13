@@ -14,8 +14,9 @@ import {
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import { supabase } from "../../services/supabase/client";
 import { PendingPartnerBanner } from "./components/PendingPartnerBanner";
-import { PartnershipRow } from "../../services/api/partnerships";
+import { PartnershipRow, getAcceptedPartnerIdsForUsers } from "../../services/api/partnerships";
 import { fetchSpotTagsForSpotIds, type TaggedUser } from "../../services/api/spotTags";
+import { buildTagPresentation } from "../../features/tags/tagPresentation";
 
 type ProfileMini = {
   id: string;
@@ -45,6 +46,7 @@ type FeedRow = {
   profiles: ProfileMini;
   photos: SpotPhotoPreview[];
   tagged_users: TaggedUser[];
+  partner_tagged_user_id: string | null;
 };
 
 type FeedEvent = {
@@ -166,9 +168,17 @@ export default function FeedScreen() {
 
       const spotsRaw = ((spotsData ?? []) as unknown) as Omit<
         FeedRow,
-        "photos" | "tagged_users"
+        "photos" | "tagged_users" | "partner_tagged_user_id"
       >[];
-      let spots: FeedRow[] = spotsRaw.map((s) => ({ ...s, photos: [], tagged_users: [] }));
+      const partnerByAuthor = await getAcceptedPartnerIdsForUsers(
+        Array.from(new Set(spotsRaw.map((s) => s.user_id)))
+      );
+      let spots: FeedRow[] = spotsRaw.map((s) => ({
+        ...s,
+        photos: [],
+        tagged_users: [],
+        partner_tagged_user_id: partnerByAuthor[s.user_id] ?? null,
+      }));
 
       if (spotsRaw.length > 0) {
         const spotIds = spotsRaw.map((s) => s.id);
@@ -188,6 +198,7 @@ export default function FeedScreen() {
             ...s,
             photos: [],
             tagged_users: tagsBySpot[s.id] ?? [],
+            partner_tagged_user_id: partnerByAuthor[s.user_id] ?? null,
           }));
         } else {
           const rows =
@@ -232,6 +243,7 @@ export default function FeedScreen() {
             ...s,
             photos: (photosBySpot.get(s.id) ?? []).filter((p) => !!p.signedUrl),
             tagged_users: tagsBySpot[s.id] ?? [],
+            partner_tagged_user_id: partnerByAuthor[s.user_id] ?? null,
           }));
         }
       }
@@ -358,21 +370,47 @@ export default function FeedScreen() {
           </View>
         </Pressable>
 
-        {spot.tagged_users.length > 0 ? (
-          <View style={s.wentWithRow}>
-            <Text style={s.wentWithLabel}>Went with: </Text>
-            <View style={s.wentWithUsersWrap}>
-              {spot.tagged_users.map((user, idx) => (
-                <Pressable key={user.id} onPress={() => goProfile(user.id)} hitSlop={8}>
-                  <Text style={s.wentWithUser}>
-                    @{user.username ?? "unknown"}
-                    {idx < spot.tagged_users.length - 1 ? ", " : ""}
-                  </Text>
-                </Pressable>
-              ))}
+        {(() => {
+          const presentation = buildTagPresentation(spot.tagged_users, spot.partner_tagged_user_id);
+          if (presentation.kind === "none") return null;
+
+          if (presentation.kind === "partner_only") {
+            return (
+              <View style={s.wentWithRow}>
+                <Text style={s.withPartnerLabel}>
+                  With @{presentation.partner.username ?? "unknown"} {"\u2764"}
+                </Text>
+              </View>
+            );
+          }
+
+          if (presentation.kind === "partner_with_others") {
+            return (
+              <View style={s.wentWithRow}>
+                <Text style={s.withPartnerLabel}>
+                  With @{presentation.partner.username ?? "unknown"} and {presentation.otherCount}{" "}
+                  {presentation.otherCount === 1 ? "other" : "others"}
+                </Text>
+              </View>
+            );
+          }
+
+          return (
+            <View style={s.wentWithRow}>
+              <Text style={s.wentWithLabel}>Went with: </Text>
+              <View style={s.wentWithUsersWrap}>
+                {presentation.users.map((user, idx) => (
+                  <Pressable key={user.id} onPress={() => goProfile(user.id)} hitSlop={8}>
+                    <Text style={s.wentWithUser}>
+                      @{user.username ?? "unknown"}
+                      {idx < presentation.users.length - 1 ? ", " : ""}
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
             </View>
-          </View>
-        ) : null}
+          );
+        })()}
       </View>
     );
   };
@@ -476,6 +514,7 @@ const s = StyleSheet.create({
   footerText: { fontSize: 14, color: "#999", fontStyle: "italic" },
   wentWithRow: { flexDirection: "row", flexWrap: "wrap", marginTop: 10 },
   wentWithLabel: { fontSize: 13, color: "#444", fontWeight: "700" },
+  withPartnerLabel: { fontSize: 13, color: "#111", fontWeight: "800" },
   wentWithUsersWrap: { flexDirection: "row", flexWrap: "wrap" },
   wentWithUser: { fontSize: 13, color: "#1b5fc6", fontWeight: "700" },
 });

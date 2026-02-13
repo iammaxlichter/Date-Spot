@@ -1,6 +1,12 @@
 import { supabase } from "../supabase/client";
 
 export type PartnershipStatus = "pending" | "accepted" | "declined" | "cancelled";
+export type PartnerProfile = {
+  id: string;
+  username: string | null;
+  name: string | null;
+  avatar_url: string | null;
+};
 
 export type PartnershipRow = {
   id: string;
@@ -46,6 +52,42 @@ export async function getAcceptedPartnershipForUser(userId: string) {
 
   if (error) throw error;
   return (data as PartnershipRow | null) ?? null;
+}
+
+export async function getActivePartner(userId: string): Promise<PartnerProfile | null> {
+  const partnership = await getAcceptedPartnershipForUser(userId);
+  if (!partnership) return null;
+
+  const partnerId = otherUserId(partnership, userId);
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("id,username,name,avatar_url")
+    .eq("id", partnerId)
+    .maybeSingle();
+
+  if (error) throw error;
+  return (data as PartnerProfile | null) ?? null;
+}
+
+export async function getAcceptedPartnerIdsForUsers(userIds: string[]): Promise<Record<string, string>> {
+  const ids = Array.from(new Set(userIds.filter(Boolean)));
+  if (ids.length === 0) return {};
+
+  const { data, error } = await supabase
+    .from("partnerships")
+    .select("user_a,user_b,status")
+    .eq("status", "accepted")
+    .or(ids.map((id) => `user_a.eq.${id},user_b.eq.${id}`).join(","));
+
+  if (error) throw error;
+
+  const partnerByUser: Record<string, string> = {};
+  for (const row of (data ?? []) as Array<{ user_a: string; user_b: string; status: string }>) {
+    if (row.status !== "accepted") continue;
+    if (ids.includes(row.user_a)) partnerByUser[row.user_a] = row.user_b;
+    if (ids.includes(row.user_b)) partnerByUser[row.user_b] = row.user_a;
+  }
+  return partnerByUser;
 }
 
 export async function getActiveBetween(me: string, them: string) {

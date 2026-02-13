@@ -5,6 +5,7 @@ import { useFocusEffect } from "@react-navigation/native";
 import { supabase } from "../../../services/supabase/client";
 import { fetchSpotPhotosWithSignedUrls } from "../../../services/api/spotPhotosService";
 import { fetchSpotTags } from "../../../services/api/spotTags";
+import { getActivePartner } from "../../../services/api/partnerships";
 import type { ExistingSpotPhoto } from "../../../types/spotPhotos";
 import type { SpotFull } from "../types";
 
@@ -28,6 +29,7 @@ export function useSpotDetails(args: { spotId: string; navigation: any }) {
   const [photos, setPhotos] = React.useState<ExistingSpotPhoto[]>([]);
   const [expandedNotes, setExpandedNotes] = React.useState(false);
   const [currentUserId, setCurrentUserId] = React.useState<string | null>(null);
+  const [activePartnerId, setActivePartnerId] = React.useState<string | null>(null);
 
   React.useEffect(() => {
     (async () => {
@@ -60,8 +62,12 @@ export function useSpotDetails(args: { spotId: string; navigation: any }) {
       if (error) throw error;
 
       const baseSpot = (data as unknown) as SpotFull;
-      const tags = await fetchSpotTags(spotId);
+      const [tags, partner] = await Promise.all([
+        fetchSpotTags(spotId),
+        getActivePartner((data as any).user_id as string),
+      ]);
       setSpot({ ...baseSpot, tagged_users: tags });
+      setActivePartnerId(partner?.id ?? null);
 
       try {
         const loadedPhotos = await fetchSpotPhotosWithSignedUrls({ spotId });
@@ -148,5 +154,6 @@ export function useSpotDetails(args: { spotId: string; navigation: any }) {
     onProfilePress,
     onTaggedUserPress,
     timeAgoText,
+    activePartnerId,
   };
 }

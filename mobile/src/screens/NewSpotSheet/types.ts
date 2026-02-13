@@ -2,6 +2,7 @@
 import type { Price, BestFor } from "../../types/datespot";
 import type { SpotPhotoItem } from "../../types/spotPhotos";
 import type { TaggedUser } from "../../services/api/spotTags";
+import type { PartnerAnswer } from "../../features/tags/partnerTagging";
 
 export type Props = {
   name: string;
@@ -25,6 +26,8 @@ export type Props = {
   selectedTaggedUsers: TaggedUser[];
   eligibleTagUsers: TaggedUser[];
   tagUsersLoading: boolean;
+  activePartner: TaggedUser | null;
+  partnerAnswer: PartnerAnswer;
   
   onChangeName: (v: string) => void;
   onChangeAtmosphere: (v: string) => void;
@@ -36,6 +39,7 @@ export type Props = {
   onChangeBestFor: (v: BestFor | null) => void;
   onChangeWouldReturn: (v: boolean) => void;
   onChangeTaggedUsers: (users: TaggedUser[]) => void;
+  onChangePartnerAnswer: (answer: PartnerAnswer) => void;
 
   onCancel: () => void;
   onSave: () => void;

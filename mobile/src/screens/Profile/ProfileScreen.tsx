@@ -397,6 +397,7 @@ export default function ProfileScreen() {
       <SpotsSection
         spots={spots}
         spotsLoading={spotsLoading}
+        activePartnerId={partner?.id ?? null}
         onPressSpot={(spotId) => navigation.navigate("SpotDetails", { spotId })}
         onPressTaggedUser={(userId) => {
           if (profile.id === userId) navigation.navigate("Profile");

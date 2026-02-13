@@ -35,6 +35,8 @@ export function NewSpotSheetScreen({
   selectedTaggedUsers,
   eligibleTagUsers,
   tagUsersLoading,
+  activePartner,
+  partnerAnswer,
   onChangeName,
   onChangeAtmosphere,
   onChangeDateScore,
@@ -44,6 +46,7 @@ export function NewSpotSheetScreen({
   onChangeBestFor,
   onChangeWouldReturn,
   onChangeTaggedUsers,
+  onChangePartnerAnswer,
   onCancel,
   onSave,
 }: Props) {
@@ -77,8 +80,21 @@ export function NewSpotSheetScreen({
     !!vibe && !isPresetVibe(vibe)
   );
   const [tagPickerOpen, setTagPickerOpen] = React.useState(false);
+  const partnerTagged = !!activePartner && selectedTaggedUsers.some((u) => u.id === activePartner.id);
+  const showPartnerQuestion = !!activePartner;
+  const showStandardTagging = !activePartner || partnerAnswer === "no";
+  const showPartnerConfirmation = !!activePartner && partnerAnswer === "yes" && partnerTagged;
+  const tagPickerUsers = React.useMemo(() => {
+    if (partnerAnswer === "no" && activePartner) {
+      return eligibleTagUsers.filter((u) => u.id !== activePartner.id);
+    }
+    return eligibleTagUsers;
+  }, [activePartner, eligibleTagUsers, partnerAnswer]);
 
   const removeTaggedUser = (userId: string) => {
+    if (activePartner && partnerAnswer === "yes" && userId === activePartner.id) {
+      return;
+    }
     onChangeTaggedUsers(selectedTaggedUsers.filter((user) => user.id !== userId));
   };
 
@@ -119,36 +135,98 @@ export function NewSpotSheetScreen({
           />
 
           <View style={styles.tagPeopleSection}>
-            <View style={styles.tagPeopleHeaderRow}>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.tagPeopleTitle}>Went with</Text>
-                <Text style={styles.tagPeopleSubtext}>Tag mutuals you follow</Text>
+            {showPartnerQuestion ? (
+              <View style={styles.partnerPromptCard}>
+                <Text style={styles.partnerPromptTitle}>
+                  Did you go with your DateSpot partner @{activePartner?.username ?? "your-partner"}?
+                </Text>
+                <View style={styles.partnerPromptButtonsRow}>
+                  <TouchableOpacity
+                    style={[
+                      styles.partnerPromptButton,
+                      partnerAnswer === "yes" ? styles.partnerPromptButtonYes : null,
+                    ]}
+                    onPress={() => onChangePartnerAnswer("yes")}
+                  >
+                    <Text
+                      style={[
+                        styles.partnerPromptButtonText,
+                        partnerAnswer === "yes" ? styles.partnerPromptButtonTextSelected : null,
+                      ]}
+                    >
+                      Yes
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[
+                      styles.partnerPromptButton,
+                      partnerAnswer === "no" ? styles.partnerPromptButtonNo : null,
+                    ]}
+                    onPress={() => onChangePartnerAnswer("no")}
+                  >
+                    <Text
+                      style={[
+                        styles.partnerPromptButtonText,
+                        partnerAnswer === "no" ? styles.partnerPromptButtonTextSelected : null,
+                      ]}
+                    >
+                      No
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+
+                {showPartnerConfirmation ? (
+                  <View style={styles.partnerConfirmRow}>
+                    <Text style={styles.partnerConfirmText}>
+                      With: @{activePartner?.username ?? "partner"} ✓
+                    </Text>
+                    <TouchableOpacity
+                      style={styles.partnerAddOthersBtn}
+                      onPress={() => setTagPickerOpen(true)}
+                    >
+                      <Text style={styles.partnerAddOthersBtnText}>Add others</Text>
+                    </TouchableOpacity>
+                  </View>
+                ) : null}
               </View>
-              <TouchableOpacity
-                style={styles.tagPeopleAddBtn}
-                onPress={() => setTagPickerOpen(true)}
-              >
-                <Text style={styles.tagPeopleAddBtnText}>Add people</Text>
-              </TouchableOpacity>
-            </View>
+            ) : null}
+
+            {showStandardTagging ? (
+              <View style={styles.tagPeopleHeaderRow}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.tagPeopleTitle}>Went with</Text>
+                  <Text style={styles.tagPeopleSubtext}>Tag people you follow</Text>
+                </View>
+                <TouchableOpacity
+                  style={styles.tagPeopleAddBtn}
+                  onPress={() => setTagPickerOpen(true)}
+                >
+                  <Text style={styles.tagPeopleAddBtnText}>Add people</Text>
+                </TouchableOpacity>
+              </View>
+            ) : null}
 
             {selectedTaggedUsers.length > 0 ? (
               <View style={styles.tagPeopleChipsWrap}>
                 {selectedTaggedUsers.map((user) => (
                   <View key={user.id} style={styles.taggedChip}>
                     <Text style={styles.taggedChipText}>@{user.username ?? "unknown"}</Text>
-                    <TouchableOpacity
-                      onPress={() => removeTaggedUser(user.id)}
-                      hitSlop={8}
-                      style={styles.taggedChipRemoveBtn}
-                    >
-                      <Text style={styles.taggedChipRemoveText}>x</Text>
-                    </TouchableOpacity>
+                    {activePartner && partnerAnswer === "yes" && user.id === activePartner.id ? null : (
+                      <TouchableOpacity
+                        onPress={() => removeTaggedUser(user.id)}
+                        hitSlop={8}
+                        style={styles.taggedChipRemoveBtn}
+                      >
+                        <Text style={styles.taggedChipRemoveText}>x</Text>
+                      </TouchableOpacity>
+                    )}
                   </View>
                 ))}
               </View>
             ) : (
-              <Text style={styles.tagPeopleEmpty}>No people tagged yet.</Text>
+              <Text style={styles.tagPeopleEmpty}>
+                {showStandardTagging ? "No people tagged yet." : "No additional people tagged."}
+              </Text>
             )}
           </View>
 
@@ -306,7 +384,7 @@ export function NewSpotSheetScreen({
       <TagPeoplePicker
         visible={tagPickerOpen}
         loading={tagUsersLoading}
-        users={eligibleTagUsers}
+        users={tagPickerUsers}
         selectedIds={selectedTaggedUsers.map((u) => u.id)}
         onClose={() => setTagPickerOpen(false)}
         onToggleSelect={toggleTaggedUser}

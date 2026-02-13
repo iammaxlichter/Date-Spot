@@ -139,6 +139,73 @@ export const styles = StyleSheet.create({
     marginTop: 10,
     marginBottom: 6,
   },
+  partnerPromptCard: {
+    borderWidth: 0,
+    backgroundColor: "transparent",
+    borderRadius: 0,
+    padding: 0,
+    marginBottom: 18,
+  },
+  partnerPromptTitle: {
+    fontSize: 14,
+    fontWeight: "800",
+    color: "#111",
+  },
+  partnerPromptButtonsRow: {
+    flexDirection: "row",
+    gap: 8,
+    marginTop: 10,
+  },
+  partnerPromptButton: {
+    borderWidth: 1,
+    borderColor: "#ddd",
+    borderRadius: 999,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    backgroundColor: "#fff",
+  },
+  partnerPromptButtonYes: {
+    borderColor: "#111",
+    backgroundColor: "#111",
+  },
+  partnerPromptButtonNo: {
+    borderColor: "#111",
+    backgroundColor: "#111",
+  },
+  partnerPromptButtonText: {
+    fontSize: 12,
+    fontWeight: "800",
+    color: "#111",
+  },
+  partnerPromptButtonTextSelected: {
+    color: "#fff",
+  },
+  partnerConfirmRow: {
+    marginTop: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 8,
+  },
+  partnerConfirmText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#111",
+    flex: 1,
+  },
+  partnerAddOthersBtn: {
+    borderWidth: 1,
+    borderColor: "#ddd",
+    borderRadius: 999,
+    backgroundColor: "#fff",
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  partnerAddOthersBtnText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#111",
+  },
   tagPeopleHeaderRow: {
     flexDirection: "row",
     alignItems: "center",

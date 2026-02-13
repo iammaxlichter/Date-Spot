@@ -25,6 +25,12 @@ import { getNearbySpots } from "../../services/api/spots";
 import type { SpotPhotoItem } from "../../types/spotPhotos";
 import { supabase } from "../../services/supabase/client";
 import { fetchEligibleTagUsers, type TaggedUser } from "../../services/api/spotTags";
+import { getActivePartner } from "../../services/api/partnerships";
+import {
+  type PartnerAnswer,
+  withPartnerTag,
+  withoutPartnerTag,
+} from "../../features/tags/partnerTagging";
 
 export default function MapScreen({ navigation }: any) {
   const mapRef = useRef<MapView | null>(null);
@@ -33,6 +39,8 @@ export default function MapScreen({ navigation }: any) {
   const [selectedTaggedUsers, setSelectedTaggedUsers] = React.useState<TaggedUser[]>([]);
   const [eligibleTagUsers, setEligibleTagUsers] = React.useState<TaggedUser[]>([]);
   const [tagUsersLoading, setTagUsersLoading] = React.useState(false);
+  const [activePartner, setActivePartner] = React.useState<TaggedUser | null>(null);
+  const [partnerAnswer, setPartnerAnswer] = React.useState<PartnerAnswer>(null);
 
   useFocusEffect(
     useCallback(() => {
@@ -80,7 +88,7 @@ export default function MapScreen({ navigation }: any) {
     let cancelled = false;
 
     const loadEligibleUsers = async () => {
-      if (!spotCreation.showNewSpotSheet) return;
+      if (!spotCreation.isPlacingPin && !spotCreation.showNewSpotSheet) return;
       try {
         setTagUsersLoading(true);
         const { data: auth, error } = await supabase.auth.getUser();
@@ -88,11 +96,17 @@ export default function MapScreen({ navigation }: any) {
         const myId = auth.user?.id;
         if (!myId) return;
 
-        const users = await fetchEligibleTagUsers(myId);
+        const [partner, users] = await Promise.all([
+          getActivePartner(myId),
+          fetchEligibleTagUsers(myId),
+        ]);
         if (!cancelled) setEligibleTagUsers(users);
+        if (!cancelled) setActivePartner(partner);
+        if (!cancelled && !spotCreation.showNewSpotSheet) setPartnerAnswer(null);
       } catch (e) {
         console.error("[map] failed to load eligible tag users:", e);
         if (!cancelled) setEligibleTagUsers([]);
+        if (!cancelled) setActivePartner(null);
       } finally {
         if (!cancelled) setTagUsersLoading(false);
       }
@@ -103,7 +117,7 @@ export default function MapScreen({ navigation }: any) {
     return () => {
       cancelled = true;
     };
-  }, [spotCreation.showNewSpotSheet]);
+  }, [spotCreation.isPlacingPin, spotCreation.showNewSpotSheet]);
 
   // Update the context whenever spot creation state changes
   useEffect(() => {
@@ -240,9 +254,23 @@ export default function MapScreen({ navigation }: any) {
           onChangeBestFor={(v) => spotCreation.setField("bestFor", v)}
           onChangeWouldReturn={(v) => spotCreation.setField("wouldReturn", v)}
           onChangeTaggedUsers={setSelectedTaggedUsers}
+          activePartner={activePartner}
+          partnerAnswer={partnerAnswer}
+          onChangePartnerAnswer={(answer) => {
+            setPartnerAnswer(answer);
+            if (answer === "yes") {
+              setSelectedTaggedUsers((prev) => withPartnerTag(prev, activePartner));
+              return;
+            }
+            if (answer === "no") {
+              setSelectedTaggedUsers((prev) => withoutPartnerTag(prev, activePartner));
+            }
+          }}
           onCancel={() => {
             setPhotos([]);
             setSelectedTaggedUsers([]);
+            setActivePartner(null);
+            setPartnerAnswer(null);
             spotCreation.cancelNewSpot();
           }}
           onSave={async () => {
@@ -252,6 +280,8 @@ export default function MapScreen({ navigation }: any) {
             );
             setPhotos([]);
             setSelectedTaggedUsers([]);
+            setActivePartner(null);
+            setPartnerAnswer(null);
           }}
         />
       )}

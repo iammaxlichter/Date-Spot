@@ -11,6 +11,13 @@ import {
   upsertSpotTags,
   type TaggedUser,
 } from "../../../services/api/spotTags";
+import { getActivePartner } from "../../../services/api/partnerships";
+import {
+  type PartnerAnswer,
+  inferPartnerAnswer,
+  withPartnerTag,
+  withoutPartnerTag,
+} from "../../../features/tags/partnerTagging";
 
 import type { SpotPhotoItem } from "../../../types/spotPhotos";
 import { syncSpotPhotosOnEdit } from "../../../services/api/spotPhotosService";
@@ -35,6 +42,8 @@ export function useEditSpot(args: { spotId: string; navigation: any }) {
   const [selectedTaggedUsers, setSelectedTaggedUsers] = React.useState<TaggedUser[]>([]);
   const [eligibleTagUsers, setEligibleTagUsers] = React.useState<TaggedUser[]>([]);
   const [tagUsersLoading, setTagUsersLoading] = React.useState(false);
+  const [activePartner, setActivePartner] = React.useState<TaggedUser | null>(null);
+  const [partnerAnswer, setPartnerAnswer] = React.useState<PartnerAnswer>(null);
 
   React.useEffect(() => {
     (async () => {
@@ -90,12 +99,15 @@ export function useEditSpot(args: { spotId: string; navigation: any }) {
 
       if (currentUserId) {
         setTagUsersLoading(true);
-        const [existingTags, eligible] = await Promise.all([
+        const [existingTags, partner, eligible] = await Promise.all([
           fetchSpotTags(spotId),
+          getActivePartner(currentUserId),
           fetchEligibleTagUsers(currentUserId),
         ]);
         setSelectedTaggedUsers(existingTags);
         setEligibleTagUsers(eligible);
+        setActivePartner(partner);
+        setPartnerAnswer(inferPartnerAnswer(existingTags, partner));
         setTagUsersLoading(false);
       }
     } catch (e: any) {
@@ -238,9 +250,21 @@ export function useEditSpot(args: { spotId: string; navigation: any }) {
     setBestFor,
     setWouldReturn,
     setSelectedTaggedUsers,
+    setPartnerAnswer: (answer: PartnerAnswer) => {
+      setPartnerAnswer(answer);
+      if (answer === "yes") {
+        setSelectedTaggedUsers((prev) => withPartnerTag(prev, activePartner));
+        return;
+      }
+      if (answer === "no") {
+        setSelectedTaggedUsers((prev) => withoutPartnerTag(prev, activePartner));
+      }
+    },
 
     // actions
     onSave,
     onCancel,
+    activePartner,
+    partnerAnswer,
   };
 }

@@ -2,13 +2,16 @@ import React from "react";
 import { View, Text, Image, Pressable } from "react-native";
 import { s } from "../styles";
 import type { SpotRow } from "../api/profileApi";
+import { buildTagPresentation } from "../../../features/tags/tagPresentation";
 
 export function SpotCard(props: {
   spot: SpotRow;
   timeAgo: (iso: string) => string;
   onPressTaggedUser: (userId: string) => void;
+  activePartnerId: string | null;
 }) {
-  const { spot, timeAgo, onPressTaggedUser } = props;
+  const { spot, timeAgo, onPressTaggedUser, activePartnerId } = props;
+  const presentation = buildTagPresentation(spot.tagged_users, activePartnerId);
 
   return (
     <View style={s.spotCard}>
@@ -40,11 +43,11 @@ export function SpotCard(props: {
         </Text>
       </View>
 
-      {spot.tagged_users.length > 0 ? (
+      {presentation.kind === "none" ? null : presentation.kind === "regular" ? (
         <View style={s.spotWentWithRow}>
           <Text style={s.spotWentWithLabel}>Went with: </Text>
           <View style={s.spotWentWithUsersWrap}>
-            {spot.tagged_users.map((user, idx) => (
+            {presentation.users.map((user, idx) => (
               <Pressable
                 key={user.id}
                 onPress={(e) => {
@@ -55,13 +58,24 @@ export function SpotCard(props: {
               >
                 <Text style={s.spotTaggedUser}>
                   @{user.username ?? "unknown"}
-                  {idx < spot.tagged_users.length - 1 ? ", " : ""}
+                  {idx < presentation.users.length - 1 ? ", " : ""}
                 </Text>
               </Pressable>
             ))}
           </View>
         </View>
-      ) : null}
+      ) : presentation.kind === "partner_only" ? (
+        <View style={s.spotWentWithRow}>
+          <Text style={s.spotPartnerLine}>With @{presentation.partner.username ?? "unknown"} {"\u2764"}</Text>
+        </View>
+      ) : (
+        <View style={s.spotWentWithRow}>
+          <Text style={s.spotPartnerLine}>
+            With @{presentation.partner.username ?? "unknown"} and {presentation.otherCount}{" "}
+            {presentation.otherCount === 1 ? "other" : "others"}
+          </Text>
+        </View>
+      )}
     </View>
   );
 }

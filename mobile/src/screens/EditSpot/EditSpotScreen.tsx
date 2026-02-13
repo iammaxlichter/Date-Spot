@@ -87,6 +87,9 @@ export default function EditSpotScreen({ route, navigation }: any) {
         onChangeBestFor={edit.setBestFor}
         onChangeWouldReturn={edit.setWouldReturn}
         onChangeTaggedUsers={edit.setSelectedTaggedUsers}
+        activePartner={edit.activePartner}
+        partnerAnswer={edit.partnerAnswer}
+        onChangePartnerAnswer={edit.setPartnerAnswer}
         onCancel={() => {
           setPhotos([]);
           initialPhotosRef.current = null;

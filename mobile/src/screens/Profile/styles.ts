@@ -185,6 +185,11 @@ export const s = StyleSheet.create({
     color: "#1b5fc6",
     fontWeight: "700",
   },
+  spotPartnerLine: {
+    fontSize: 13,
+    color: "#111",
+    fontWeight: "800",
+  },
   spotPill: {
     borderWidth: 1,
     borderColor: "#eee",

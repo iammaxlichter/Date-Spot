@@ -10,8 +10,9 @@ export function SpotsSection(props: {
   onPressSpot: (spotId: string) => void;
   onPressTaggedUser: (userId: string) => void;
   timeAgo: (iso: string) => string;
+  activePartnerId: string | null;
 }) {
-  const { spots, spotsLoading, onPressSpot, onPressTaggedUser, timeAgo } = props;
+  const { spots, spotsLoading, onPressSpot, onPressTaggedUser, timeAgo, activePartnerId } = props;
 
   return (
     <View style={{ width: "100%", paddingHorizontal: 24, marginTop: 12 }}>
@@ -33,6 +34,7 @@ export function SpotsSection(props: {
               spot={spot}
               timeAgo={timeAgo}
               onPressTaggedUser={onPressTaggedUser}
+              activePartnerId={activePartnerId}
             />
           </Pressable>
         ))

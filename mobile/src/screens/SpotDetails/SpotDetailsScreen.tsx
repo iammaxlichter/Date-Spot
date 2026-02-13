@@ -10,6 +10,7 @@ import { SpotDetailsPhotos } from "./components/SpotDetailsPhotos";
 import { SpotStats } from "./components/SpotDetailsStats";
 import { SpotTags } from "./components/SpotDetailsTags";
 import { SpotNotes } from "./components/SpotDetailsNotes";
+import { buildTagPresentation } from "../../features/tags/tagPresentation";
 
 export default function SpotDetailsScreen({ route }: any) {
   const navigation = useNavigation<any>();
@@ -20,6 +21,7 @@ export default function SpotDetailsScreen({ route }: any) {
   if (d.loading) return <SpotDetailsLoading />;
   if (!d.spot) return null;
   const taggedUsers = d.spot.tagged_users ?? [];
+  const presentation = buildTagPresentation(taggedUsers, d.activePartnerId);
 
   return (
     <ScrollView style={s.screen} contentContainerStyle={{ padding: 14, paddingBottom: 24 }}>
@@ -49,19 +51,30 @@ export default function SpotDetailsScreen({ route }: any) {
 
         <SpotTags vibe={d.spot.vibe} price={d.spot.price} bestFor={d.spot.best_for} />
 
-        {taggedUsers.length > 0 ? (
+        {presentation.kind !== "none" ? (
           <View style={s.section}>
-            <Text style={s.label}>Went with</Text>
-            <View style={s.wentWithRow}>
-              {taggedUsers.map((user, idx) => (
-                <Pressable key={user.id} onPress={() => d.onTaggedUserPress(user.id)} hitSlop={8}>
-                  <Text style={s.wentWithUser}>
-                    @{user.username ?? "unknown"}
-                    {idx < taggedUsers.length - 1 ? ", " : ""}
-                  </Text>
-                </Pressable>
-              ))}
-            </View>
+            {presentation.kind === "regular" ? (
+              <>
+                <Text style={s.label}>Went with</Text>
+                <View style={s.wentWithRow}>
+                  {presentation.users.map((user, idx) => (
+                    <Pressable key={user.id} onPress={() => d.onTaggedUserPress(user.id)} hitSlop={8}>
+                      <Text style={s.wentWithUser}>
+                        @{user.username ?? "unknown"}
+                        {idx < presentation.users.length - 1 ? ", " : ""}
+                      </Text>
+                    </Pressable>
+                  ))}
+                </View>
+              </>
+            ) : presentation.kind === "partner_only" ? (
+              <Text style={s.partnerWithLine}>With @{presentation.partner.username ?? "unknown"} {"\u2764"}</Text>
+            ) : (
+              <Text style={s.partnerWithLine}>
+                With @{presentation.partner.username ?? "unknown"} and {presentation.otherCount}{" "}
+                {presentation.otherCount === 1 ? "other" : "others"}
+              </Text>
+            )}
           </View>
         ) : null}
 

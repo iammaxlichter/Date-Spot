@@ -13,7 +13,6 @@ import SearchScreen from "../screens/Search/SearchScreen";
 import FollowersListScreen from "../screens/FollowersList/FollowersListScreen";
 import FollowingListScreen from "../screens/FollowingList/FollowingListScreen";
 import UserProfileScreen from "../screens/UserProfileScreen/UserProfileScreen";
-import FeedScreen from "../screens/Feed/FeedScreen";
 import SpotDetailsScreen from "../screens/SpotDetails/SpotDetailsScreen";
 import EditSpotScreen from "../screens/EditSpot/EditSpotScreen";
 import SettingsScreen from "../screens/Settings/SettingsScreen";
@@ -28,7 +27,7 @@ import type { RootStackParamList } from "./types";
 import { navigationRef } from "./navigationRef";
 import { useAuthSession } from "./hooks/useAuthSession";
 import { BottomOverlay } from "./components/BottomOverlay";
-import { FeedHeader } from "./components/FeedHeader";
+import { AppDrawerNavigator } from "./DrawerNavigator";
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -60,16 +59,10 @@ function NavigatorContent() {
             <>
               <Stack.Screen
                 name="Feed"
-                component={FeedScreen}
-                options={({ navigation }) => ({
-                  headerShown: true,
-                  headerShadowVisible: false,
-                  header: () => (
-                    <FeedHeader
-                      onProfile={() => navigation.navigate("Profile")}
-                    />
-                  ),
-                })}
+                component={AppDrawerNavigator}
+                options={{
+                  headerShown: false,
+                }}
               />
 
               <Stack.Screen

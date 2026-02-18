@@ -58,7 +58,7 @@ function NavigatorContent() {
           {session ? (
             <>
               <Stack.Screen
-                name="Feed"
+                name="Home"
                 component={AppDrawerNavigator}
                 options={{
                   headerShown: false,
@@ -186,7 +186,7 @@ function NavigatorContent() {
           <BottomOverlay
             activeRoute={activeRoute}
             onGoHome={() => {
-              if (navigationRef.isReady()) navigationRef.navigate("Feed");
+              if (navigationRef.isReady()) navigationRef.navigate("Home");
             }}
             onSearch={() => {
               if (navigationRef.isReady()) navigationRef.navigate("Search");

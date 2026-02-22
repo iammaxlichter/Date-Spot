@@ -17,6 +17,7 @@ import SpotDetailsScreen from "../screens/SpotDetails/SpotDetailsScreen";
 import EditSpotScreen from "../screens/EditSpot/EditSpotScreen";
 import SettingsScreen from "../screens/Settings/SettingsScreen";
 import EditProfileScreen from "../screens/EditProfile/EditProfileScreen";
+import FiltersScreen from "../screens/Filters/FiltersScreen";
 
 import {
   SpotCreationProvider,
@@ -124,6 +125,16 @@ function NavigatorContent() {
               />
 
               <Stack.Screen
+                name="Filters"
+                component={FiltersScreen}
+                options={{
+                  title: "Filters",
+                  headerShadowVisible: false,
+                  headerBackTitle: "",
+                }}
+              />
+
+              <Stack.Screen
                 name="Followers"
                 component={FollowersListScreen}
                 options={{
@@ -210,3 +221,10 @@ export function RootNavigator() {
     </SafeAreaProvider>
   );
 }
+
+
+
+
+
+
+

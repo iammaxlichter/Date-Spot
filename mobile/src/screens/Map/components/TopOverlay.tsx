@@ -1,6 +1,7 @@
 // src/screens/components/TopOverlay.tsx
 import React from "react";
 import { View, Text, TouchableOpacity, TextInput, Keyboard } from "react-native";
+import { MaterialIcons } from "@expo/vector-icons";
 import type { MapSpot } from "../../../services/api/spots";
 import type { GooglePrediction } from "../types";
 import { styles } from "../styles";
@@ -16,6 +17,7 @@ export function TopOverlay(props: {
   searching: boolean;
   onSelectSaved: (spot: MapSpot) => void;
   onSelectGoogle: (prediction: GooglePrediction) => void;
+  onOpenFilters: () => void;
   onAddSpot: () => void;
 }) {
   const {
@@ -28,6 +30,7 @@ export function TopOverlay(props: {
     searching,
     onSelectSaved,
     onSelectGoogle,
+    onOpenFilters,
     onAddSpot,
   } = props;
 
@@ -36,7 +39,7 @@ export function TopOverlay(props: {
       <View style={styles.searchBar}>
         <TextInput
           style={styles.searchInput}
-          placeholder="Search places or date spotsâ€¦"
+          placeholder="Search places or date spots…"
           value={searchQuery}
           onChangeText={onChangeSearch}
           returnKeyType="search"
@@ -59,9 +62,16 @@ export function TopOverlay(props: {
         onSelectGoogle={onSelectGoogle}
       />
 
-      <TouchableOpacity style={styles.addPinButton} onPress={onAddSpot}>
-        <Text style={styles.addPinText}>Add Date Spot</Text>
-      </TouchableOpacity>
+      <View style={styles.actionRow}>
+        <TouchableOpacity style={styles.addPinButton} onPress={onAddSpot}>
+          <Text style={styles.addPinText}>Add Date Spot</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.filtersButton} onPress={onOpenFilters}>
+          <MaterialIcons name="filter-list" size={20} color="#333" style={styles.filtersButtonIcon} />
+          <Text style={styles.filtersButtonText}>Filters</Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 }

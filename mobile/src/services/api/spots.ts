@@ -1,4 +1,5 @@
 import { supabase } from "../supabase/client";
+import { fetchSpotTagsForSpotIds, type TaggedUser } from "./spotTags";
 
 export type Spot = {
   id: string;
@@ -74,6 +75,12 @@ export type MapSpot = {
   created_at: string;
   atmosphere?: string | null;
   date_score?: number | null;
+  notes?: string | null;
+  vibe?: string | null;
+  price?: string | null;
+  best_for?: string | null;
+  would_return?: boolean | null;
+  tagged_users?: TaggedUser[];
   author: {
     id: string;
     avatar_url: string | null;
@@ -196,7 +203,7 @@ export async function getFollowedMapSpots(limit = 500): Promise<MapSpot[]> {
     .from("spots")
     .select(
       `
-      id,name,latitude,longitude,user_id,created_at,atmosphere,date_score,
+      id,name,latitude,longitude,user_id,created_at,atmosphere,date_score,notes,vibe,price,best_for,would_return,
       profiles:profiles!spots_user_id_fkey(id,avatar_url,username,name)
     `
     )
@@ -214,8 +221,15 @@ export async function getFollowedMapSpots(limit = 500): Promise<MapSpot[]> {
     created_at: string;
     atmosphere: string | null;
     date_score: number | null;
+    notes: string | null;
+    vibe: string | null;
+    price: string | null;
+    best_for: string | null;
+    would_return: boolean | null;
     profiles: unknown;
   }>;
+
+  const tagsBySpot = await fetchSpotTagsForSpotIds(rows.map((row) => row.id));
 
   const avatarPathBySpotId = new Map<string, string>();
   const avatarPaths = Array.from(
@@ -261,6 +275,12 @@ export async function getFollowedMapSpots(limit = 500): Promise<MapSpot[]> {
     created_at: row.created_at,
     atmosphere: row.atmosphere ?? null,
     date_score: row.date_score ?? null,
+    notes: row.notes ?? null,
+    vibe: row.vibe ?? null,
+    price: row.price ?? null,
+    best_for: row.best_for ?? null,
+    would_return: row.would_return ?? null,
+    tagged_users: tagsBySpot[row.id] ?? [],
     author: {
       id: profile?.id ?? row.user_id,
       avatar_url: resolvedAvatar,

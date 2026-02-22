@@ -22,6 +22,36 @@ export const styles = StyleSheet.create({
     fontSize: 14,
   },
 
+  actionRow: {
+    marginTop: 8,
+    flexDirection: "row",
+    alignItems: "center",
+  },
+
+  filtersButton: {
+    marginLeft: "auto",
+    backgroundColor: "white",
+    borderWidth: 1,
+    borderColor: "#ddd",
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  filtersButtonIcon: {
+    marginRight: 6,
+  },
+  filtersButtonText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#333",
+  },
+
   suggestionsWrapper: {
     marginTop: 4,
     maxHeight: 160,
@@ -58,12 +88,10 @@ export const styles = StyleSheet.create({
   },
 
   addPinButton: {
-    marginTop: 8,
     backgroundColor: "white",
     paddingHorizontal: 12,
     paddingVertical: 10,
     borderRadius: 999,
-    alignSelf: "flex-start",
     borderWidth: 1,
     borderColor: "#ddd",
     shadowColor: "#000",
@@ -76,16 +104,16 @@ export const styles = StyleSheet.create({
   },
 
   bottomSheet: {
-  position: "absolute",
-  top: 0,
-  left: 0,
-  right: 0,
-  bottom: 0,
-  backgroundColor: "white",
-  padding: 16,
-  zIndex: 1000,
-  elevation: 20,
-},
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "white",
+    padding: 16,
+    zIndex: 1000,
+    elevation: 20,
+  },
 
   sheetTitle: {
     fontSize: 16,
@@ -137,14 +165,14 @@ export const styles = StyleSheet.create({
   },
 
   pinGuideOverlay: {
-  position: "absolute",
-  top: 50,
-  left: 0,
-  right: 0,
-  bottom: 0,
-  zIndex: 999,     // was 5
-  elevation: 999,  // android
-},
+    position: "absolute",
+    top: 50,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 999,
+    elevation: 999,
+  },
 
   pinGuideDim: {
     position: "absolute",
@@ -229,17 +257,15 @@ export const styles = StyleSheet.create({
     fontSize: 16,
   },
 
-profileIconButton: {
-  width: 36,
-  height: 36,
-  borderRadius: 18,
-  overflow: "hidden",
-},
+  profileIconButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    overflow: "hidden",
+  },
 
-profileIconImage: {
-  width: 36,
-  height: 36,
-},
-
-
+  profileIconImage: {
+    width: 36,
+    height: 36,
+  },
 });

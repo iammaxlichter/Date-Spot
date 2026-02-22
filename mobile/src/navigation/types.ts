@@ -14,9 +14,13 @@ export type RootStackParamList = {
   Settings: undefined;
   EditProfile: undefined;
   Search: NavigatorScreenParams<SearchTabParamList> | undefined;
+  Filters: undefined;
   Followers: { userId: string };
   Following: { userId: string };
   UserProfile: { userId: string };
   SpotDetails: { spotId: string };
   EditSpot: { spotId: string };
 };
+
+
+

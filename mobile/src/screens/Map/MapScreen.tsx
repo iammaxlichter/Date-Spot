@@ -210,6 +210,14 @@ export default function MapScreen({ navigation }: any) {
           searching={searching}
           onSelectSaved={handleSelectSavedSpot}
           onSelectGoogle={handleSelectGooglePlace}
+          onOpenFilters={() => {
+            const parentNav = navigation.getParent();
+            if (parentNav) {
+              parentNav.navigate("Filters");
+              return;
+            }
+            navigation.navigate("Filters");
+          }}
           onAddSpot={() => spotCreation.startNewSpot(region)}
         />
       )}
@@ -296,3 +304,7 @@ export default function MapScreen({ navigation }: any) {
     </View>
   );
 }
+
+
+
+

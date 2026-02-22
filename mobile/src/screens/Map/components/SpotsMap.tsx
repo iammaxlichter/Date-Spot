@@ -1,14 +1,15 @@
 import React from "react";
 import { Keyboard } from "react-native";
 import MapView, { Marker, Region } from "react-native-maps";
-import type { Spot } from "../../../services/api/spots";
+import type { MapSpot } from "../../../services/api/spots";
 import { GREY_MAP_STYLE } from "../constants";
+import { AvatarMarker } from "./AvatarMarker";
 
 export function SpotsMap(props: {
   mapRef: React.RefObject<MapView | null>;
   region: Region;
   onRegionChangeComplete: (r: Region) => void;
-  spots: Spot[];
+  spots: MapSpot[];
   isPlacingPin: boolean;
   newSpotCoords: { latitude: number; longitude: number } | null;
   onDragEnd: (coords: { latitude: number; longitude: number }) => void;
@@ -38,18 +39,7 @@ export function SpotsMap(props: {
       }}
     >
       {spots.map((spot) => (
-        <Marker
-          key={spot.id}
-          coordinate={{ latitude: spot.latitude, longitude: spot.longitude }}
-          title={spot.name}
-          description={
-            spot.date_score || spot.atmosphere
-              ? `Atmosphere: ${spot.atmosphere ?? "—"} · Date: ${
-                  spot.date_score ?? "—"
-                }`
-              : "No ratings yet"
-          }
-        />
+        <AvatarMarker key={spot.id} spot={spot} />
       ))}
 
       {isPlacingPin && newSpotCoords && (

@@ -20,8 +20,8 @@ import { TopOverlay } from "./components/TopOverlay";
 import { PinPlacementOverlay } from "./components/PinPlacementOverlay";
 import { SpotsMap } from "./components/SpotsMap";
 
-import type { Spot } from "../../services/api/spots";
-import { getNearbySpots } from "../../services/api/spots";
+import type { MapSpot } from "../../services/api/spots";
+import { getFollowedMapSpots } from "../../services/api/spots";
 import type { SpotPhotoItem } from "../../types/spotPhotos";
 import { supabase } from "../../services/supabase/client";
 import { fetchEligibleTagUsers, type TaggedUser } from "../../services/api/spotTags";
@@ -68,11 +68,19 @@ export default function MapScreen({ navigation }: any) {
     showSuggestions,
   });
 
-  const refreshSpots = async () => {
-    if (!region) return;
-    const data = await getNearbySpots(region.latitude, region.longitude, 10);
+  const refreshSpots = useCallback(async () => {
+    const data = await getFollowedMapSpots();
     setSpots(data);
-  };
+  }, [setSpots]);
+
+  useFocusEffect(
+    useCallback(() => {
+      void refreshSpots().catch((err) => {
+        console.error(err);
+        Alert.alert("Error", "Failed to load date spots.");
+      });
+    }, [refreshSpots])
+  );
 
   const spotCreation = useSpotCreation({
     onSaved: async () => {
@@ -125,7 +133,7 @@ export default function MapScreen({ navigation }: any) {
     setIsCreatingSpot(isCreating);
   }, [spotCreation.isPlacingPin, spotCreation.showNewSpotSheet, setIsCreatingSpot]);
 
-  const handleSelectSavedSpot = (spot: Spot) => {
+  const handleSelectSavedSpot = (spot: MapSpot) => {
     Keyboard.dismiss();
 
     const targetRegion: Region = {
@@ -202,6 +210,14 @@ export default function MapScreen({ navigation }: any) {
           searching={searching}
           onSelectSaved={handleSelectSavedSpot}
           onSelectGoogle={handleSelectGooglePlace}
+          onOpenFilters={() => {
+            const parentNav = navigation.getParent();
+            if (parentNav) {
+              parentNav.navigate("Filters");
+              return;
+            }
+            navigation.navigate("Filters");
+          }}
           onAddSpot={() => spotCreation.startNewSpot(region)}
         />
       )}
@@ -288,3 +304,7 @@ export default function MapScreen({ navigation }: any) {
     </View>
   );
 }
+
+
+
+

@@ -1,12 +1,18 @@
 // src/navigation/components/FeedHeader.tsx
 import React, { useCallback, useState } from "react";
-import { View, Text, TouchableOpacity, Image } from "react-native";
+import { View, TouchableOpacity, Image, Text } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { supabase } from "../../services/supabase/client";
 import { navStyles } from "../styles";
 
-export function FeedHeader({ onProfile }: { onProfile: () => void }) {
+export function FeedHeader({
+  onOpenDrawer,
+  onProfile,
+}: {
+  onOpenDrawer: () => void;
+  onProfile: () => void;
+}) {
   const insets = useSafeAreaInsets();
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
 
@@ -38,7 +44,14 @@ export function FeedHeader({ onProfile }: { onProfile: () => void }) {
   return (
     <View style={[navStyles.headerWrapper, { paddingTop: insets.top }]}>
       <View style={navStyles.headerRow}>
-        <Text style={navStyles.headerTitle}>Feed</Text>
+        <TouchableOpacity
+          accessibilityRole="button"
+          accessibilityLabel="Open navigation"
+          style={navStyles.menuButton}
+          onPress={onOpenDrawer}
+        >
+          <Text style={navStyles.menuIcon}>{"\u2630"}</Text>
+        </TouchableOpacity>
 
         <TouchableOpacity onPress={onProfile}>
           <Image

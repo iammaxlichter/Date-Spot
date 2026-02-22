@@ -13,11 +13,11 @@ import SearchScreen from "../screens/Search/SearchScreen";
 import FollowersListScreen from "../screens/FollowersList/FollowersListScreen";
 import FollowingListScreen from "../screens/FollowingList/FollowingListScreen";
 import UserProfileScreen from "../screens/UserProfileScreen/UserProfileScreen";
-import FeedScreen from "../screens/Feed/FeedScreen";
 import SpotDetailsScreen from "../screens/SpotDetails/SpotDetailsScreen";
 import EditSpotScreen from "../screens/EditSpot/EditSpotScreen";
 import SettingsScreen from "../screens/Settings/SettingsScreen";
 import EditProfileScreen from "../screens/EditProfile/EditProfileScreen";
+import FiltersScreen from "../screens/Filters/FiltersScreen";
 
 import {
   SpotCreationProvider,
@@ -28,7 +28,7 @@ import type { RootStackParamList } from "./types";
 import { navigationRef } from "./navigationRef";
 import { useAuthSession } from "./hooks/useAuthSession";
 import { BottomOverlay } from "./components/BottomOverlay";
-import { FeedHeader } from "./components/FeedHeader";
+import { AppDrawerNavigator } from "./DrawerNavigator";
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -59,17 +59,11 @@ function NavigatorContent() {
           {session ? (
             <>
               <Stack.Screen
-                name="Feed"
-                component={FeedScreen}
-                options={({ navigation }) => ({
-                  headerShown: true,
-                  headerShadowVisible: false,
-                  header: () => (
-                    <FeedHeader
-                      onProfile={() => navigation.navigate("Profile")}
-                    />
-                  ),
-                })}
+                name="Home"
+                component={AppDrawerNavigator}
+                options={{
+                  headerShown: false,
+                }}
               />
 
               <Stack.Screen
@@ -127,6 +121,16 @@ function NavigatorContent() {
                 options={{
                   title: "Search",
                   headerShadowVisible: false,
+                }}
+              />
+
+              <Stack.Screen
+                name="Filters"
+                component={FiltersScreen}
+                options={{
+                  title: "Filters",
+                  headerShadowVisible: false,
+                  headerBackTitle: "",
                 }}
               />
 
@@ -193,7 +197,7 @@ function NavigatorContent() {
           <BottomOverlay
             activeRoute={activeRoute}
             onGoHome={() => {
-              if (navigationRef.isReady()) navigationRef.navigate("Feed");
+              if (navigationRef.isReady()) navigationRef.navigate("Home");
             }}
             onSearch={() => {
               if (navigationRef.isReady()) navigationRef.navigate("Search");
@@ -217,3 +221,10 @@ export function RootNavigator() {
     </SafeAreaProvider>
   );
 }
+
+
+
+
+
+
+

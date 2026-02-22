@@ -17,12 +17,7 @@ import { PendingPartnerBanner } from "./components/PendingPartnerBanner";
 import { PartnershipRow, getAcceptedPartnerIdsForUsers } from "../../services/api/partnerships";
 import { fetchSpotTagsForSpotIds, type TaggedUser } from "../../services/api/spotTags";
 import { buildTagPresentation } from "../../features/tags/tagPresentation";
-
-type ProfileMini = {
-  id: string;
-  username: string | null;
-  avatar_url: string | null;
-};
+import { getFollowedDateSpots } from "../../services/api/spots";
 
 type SpotPhotoPreview = {
   id: string;
@@ -43,7 +38,12 @@ type FeedRow = {
   price: string | null;
   best_for: string | null;
   would_return: boolean;
-  profiles: ProfileMini;
+  author: {
+    id: string;
+    name: string | null;
+    username: string | null;
+    avatar_url: string | null;
+  };
   photos: SpotPhotoPreview[];
   tagged_users: TaggedUser[];
   partner_tagged_user_id: string | null;
@@ -99,31 +99,7 @@ export default function FeedScreen() {
       if (!user) throw new Error("Not authenticated");
 
       if (!isStale()) setCurrentUserId(user.id);
-
-      const { data: follows, error: followsErr } = await supabase
-        .from("follows")
-        .select("following_id")
-        .eq("follower_id", user.id);
-      if (followsErr) throw followsErr;
-
-      const followingIds = (follows ?? [])
-        .map((f: any) => f.following_id)
-        .filter(Boolean);
-
-      const feedUserIds = Array.from(new Set([user.id, ...followingIds]));
-
-      const spotsPromise = supabase
-        .from("spots")
-        .select(
-          `
-          id, created_at, user_id,
-          name, atmosphere, date_score, notes, vibe, price, best_for, would_return,
-          profiles!inner ( id, username, avatar_url )
-        `
-        )
-        .in("user_id", feedUserIds)
-        .order("created_at", { ascending: false })
-        .limit(25);
+      const spotsPromise = getFollowedDateSpots(25);
 
       const acceptedPromise = supabase
         .from("partnerships")
@@ -147,13 +123,12 @@ export default function FeedScreen() {
         .limit(10);
 
       const [
-        { data: spotsData, error: spotsErr },
+        spotsData,
         { data: acceptedData, error: acceptedErr },
         { data: pendingData, error: pendingErr },
         { data: eventsData, error: eventsErr },
       ] = await Promise.all([spotsPromise, acceptedPromise, pendingPromise, eventsPromise]);
 
-      if (spotsErr) throw spotsErr;
       if (acceptedErr) throw acceptedErr;
       if (pendingErr) throw pendingErr;
       if (eventsErr) throw eventsErr;
@@ -166,10 +141,12 @@ export default function FeedScreen() {
       setPendingIncoming(incoming);
       setBannersReady(true);
 
-      const spotsRaw = ((spotsData ?? []) as unknown) as Omit<
-        FeedRow,
-        "photos" | "tagged_users" | "partner_tagged_user_id"
-      >[];
+      const spotsRaw: Omit<FeedRow, "photos" | "tagged_users" | "partner_tagged_user_id">[] = (
+        spotsData ?? []
+      ).map((item) => ({
+        ...item.spot,
+        author: item.author,
+      }));
       const partnerByAuthor = await getAcceptedPartnerIdsForUsers(
         Array.from(new Set(spotsRaw.map((s) => s.user_id)))
       );
@@ -316,11 +293,15 @@ export default function FeedScreen() {
     }
 
     const spot = item.spot;
-    const profile = spot.profiles;
-    const avatarSource = profile?.avatar_url
-      ? { uri: profile.avatar_url }
+    const author = spot.author;
+    const avatarSource = author?.avatar_url
+      ? { uri: author.avatar_url }
       : require("../../../assets/default-avatar.png");
-    const username = profile?.username ? `@${profile.username}` : "@unknown";
+    const username = author?.username
+      ? `@${author.username}`
+      : author?.name
+      ? author.name
+      : "@unknown";
 
     const goProfile = (userId: string) => {
       if (currentUserId && userId === currentUserId) {

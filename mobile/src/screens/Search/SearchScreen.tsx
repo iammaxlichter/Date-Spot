@@ -2,8 +2,9 @@ import React from "react";
 import { createMaterialTopTabNavigator } from "@react-navigation/material-top-tabs";
 import UsersSearchScreen from "../UsersSearch/UsersSearchScreen";
 import MapScreen from "../Map/MapScreen";
+import type { SearchTabParamList } from "../../navigation/types";
 
-const Tab = createMaterialTopTabNavigator();
+const Tab = createMaterialTopTabNavigator<SearchTabParamList>();
 
 export default function SearchScreen() {
   return (

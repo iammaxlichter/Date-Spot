@@ -77,9 +77,75 @@ export const navStyles = StyleSheet.create({
     fontWeight: "600",
   },
 
+  menuButton: {
+    paddingVertical: 10,
+    marginLeft: 8,
+    marginTop: 6,
+  },
+
+  menuIcon: {
+    fontSize: 28,
+    fontWeight: "600",
+    color: "#111",
+    lineHeight: 30,
+  },
+
   avatar: {
     width: 32,
     height: 32,
     borderRadius: 16,
+  },
+
+  drawerContent: {
+    paddingTop: 6,
+    paddingHorizontal: 10,
+  },
+
+  drawerHeaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 8,
+    paddingVertical: 8,
+    marginBottom: 8,
+  },
+
+  drawerHeaderTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#111",
+  },
+
+  drawerCloseButton: {
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+  },
+
+  drawerCloseIcon: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#111",
+  },
+
+  drawerItem: {
+    borderRadius: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 10,
+    marginVertical: 2,
+  },
+
+  drawerItemActive: {
+    backgroundColor: "#f2f2f2",
+  },
+
+  drawerItemText: {
+    fontSize: 17,
+    fontWeight: "500",
+    color: "#222",
+  },
+
+  drawerItemTextActive: {
+    fontWeight: "700",
+    color: "#111",
   },
 });

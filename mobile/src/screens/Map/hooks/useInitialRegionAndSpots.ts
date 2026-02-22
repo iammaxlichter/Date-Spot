@@ -1,14 +1,14 @@
 import { useEffect, useState } from "react";
 import type { Region } from "react-native-maps";
 import { Alert } from "react-native";
-import { getNearbySpots, type Spot } from "../../../services/api/spots";
+import { getFollowedMapSpots, type MapSpot } from "../../../services/api/spots";
 import { DEFAULT_INITIAL_REGION } from "../constants";
 
 export function useInitialRegionAndSpots() {
   const [region, setRegion] = useState<Region | null>(null);
   const [loading, setLoading] = useState(true);
   const [permissionDenied, setPermissionDenied] = useState(false);
-  const [spots, setSpots] = useState<Spot[]>([]);
+  const [spots, setSpots] = useState<MapSpot[]>([]);
 
   useEffect(() => {
     (async () => {
@@ -17,11 +17,7 @@ export function useInitialRegionAndSpots() {
         const initialRegion: Region = { ...DEFAULT_INITIAL_REGION };
         setRegion(initialRegion);
 
-        const data = await getNearbySpots(
-          initialRegion.latitude,
-          initialRegion.longitude,
-          10
-        );
+        const data = await getFollowedMapSpots();
 
         console.log("Loaded spots:", data.length);
         setSpots(data);

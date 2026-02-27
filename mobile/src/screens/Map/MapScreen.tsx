@@ -27,6 +27,12 @@ import { supabase } from "../../services/supabase/client";
 import { fetchEligibleTagUsers, type TaggedUser } from "../../services/api/spotTags";
 import { getActivePartner } from "../../services/api/partnerships";
 import {
+  applySpotFilters,
+  getActiveSpotFilterCount,
+  hasActiveSpotFilters,
+} from "../../utils/filters";
+import { useSpotFiltersStore } from "../../stores/spotFiltersStore";
+import {
   type PartnerAnswer,
   withPartnerTag,
   withoutPartnerTag,
@@ -56,16 +62,15 @@ export default function MapScreen({ navigation }: any) {
     }, [setIsCreatingSpot])
   );
 
+  const filters = useSpotFiltersStore((state) => state.filters);
   const { region, setRegion, loading, permissionDenied, spots, setSpots } =
-    useInitialRegionAndSpots();
+    useInitialRegionAndSpots(filters);
+  const filteredSpots = React.useMemo(() => applySpotFilters(spots, filters), [spots, filters]);
+  const activeFilterCount = React.useMemo(() => getActiveSpotFilterCount(filters), [filters]);
+  const hasActiveFilters = React.useMemo(() => hasActiveSpotFilters(filters), [filters]);
 
-  const {
-    searchQuery,
-    setSearchQuery,
-    showSuggestions,
-    setShowSuggestions,
-    localMatches,
-  } = useSpotSearch(spots);
+  const { searchQuery, setSearchQuery, showSuggestions, setShowSuggestions, localMatches } =
+    useSpotSearch(filteredSpots);
 
   const { googleResults, searching, clearGoogleResults } = usePlacesAutocomplete({
     region,
@@ -74,9 +79,9 @@ export default function MapScreen({ navigation }: any) {
   });
 
   const refreshSpots = useCallback(async () => {
-    const data = await getFollowedMapSpots();
+    const data = await getFollowedMapSpots(500, filters);
     setSpots(data);
-  }, [setSpots]);
+  }, [filters, setSpots]);
 
   useFocusEffect(
     useCallback(() => {
@@ -231,6 +236,8 @@ export default function MapScreen({ navigation }: any) {
             }
             navigation.navigate("Filters");
           }}
+          hasActiveFilters={hasActiveFilters}
+          activeFilterCount={activeFilterCount}
           onAddSpot={() => spotCreation.startNewSpot(region)}
         />
       )}
@@ -251,7 +258,7 @@ export default function MapScreen({ navigation }: any) {
         mapRef={mapRef}
         region={region}
         onRegionChangeComplete={setRegion}
-        spots={spots}
+        spots={filteredSpots}
         isPlacingPin={spotCreation.isPlacingPin}
         newSpotCoords={spotCreation.newSpotCoords}
         onDragEnd={spotCreation.updateCoords}

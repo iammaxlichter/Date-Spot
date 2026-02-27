@@ -1,5 +1,14 @@
 import React from "react";
-import { Dimensions, Keyboard, StyleSheet, Text, View, ActivityIndicator } from "react-native";
+import {
+  ActivityIndicator,
+  Animated,
+  Dimensions,
+  Easing,
+  Keyboard,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 import MapView, { Callout, Marker, Region, type MarkerPressEvent } from "react-native-maps";
 import type { MapSpot } from "../../../services/api/spots";
 import { GREY_MAP_STYLE } from "../constants";
@@ -8,7 +17,7 @@ import { AvatarMarker } from "./AvatarMarker";
 /* ─── popup positioning constants ─── */
 const POPUP_WIDTH = 280;
 const MARKER_RADIUS = 21; // matches shell height/2 in AvatarMarker
-const POPUP_GAP = 8;
+const POPUP_GAP = 18;
 
 /* ─── build the one-line summary shown at the top of the popup ─── */
 function buildPopupHeader(spot: MapSpot): string {
@@ -121,6 +130,7 @@ export function SpotsMap(props: {
   } = props;
 
   const [activePopup, setActivePopup] = React.useState<ActivePopup | null>(null);
+  const popupAnim = React.useRef(new Animated.Value(0)).current;
   // Prevent the map's onPress from immediately dismissing a just-opened popup.
   // On Android, tapping a marker fires both the marker's onPress and the map's onPress.
   const justOpenedRef = React.useRef(false);
@@ -133,25 +143,54 @@ export function SpotsMap(props: {
   });
 
   const handleMarkerPress = React.useCallback(
-    (spot: MapSpot, event: MarkerPressEvent) => {
+    async (spot: MapSpot, event: MarkerPressEvent) => {
       justOpenedRef.current = true;
+      let anchorX = event.nativeEvent.position?.x ?? containerSize.width / 2;
+      let anchorY = event.nativeEvent.position?.y ?? containerSize.height / 2;
+
+      // Prefer true marker center projection, fallback to touch position.
+      try {
+        const point = await mapRef.current?.pointForCoordinate({
+          latitude: spot.latitude,
+          longitude: spot.longitude,
+        });
+        if (point) {
+          anchorX = point.x;
+          anchorY = point.y;
+        }
+      } catch {
+        // Fallback already set.
+      }
+
       setActivePopup({
         spot,
-        anchorX: event.nativeEvent.position.x,
-        anchorY: event.nativeEvent.position.y,
+        anchorX,
+        anchorY,
       });
       // Reset after the map's onPress has had a chance to fire
       setTimeout(() => {
         justOpenedRef.current = false;
       }, 100);
     },
-    []
+    [containerSize.height, containerSize.width, mapRef]
   );
 
   const dismissPopup = React.useCallback(() => {
     if (justOpenedRef.current) return;
     setActivePopup(null);
   }, []);
+
+  React.useEffect(() => {
+    if (!activePopup) return;
+
+    popupAnim.setValue(0);
+    Animated.timing(popupAnim, {
+      toValue: 1,
+      duration: 180,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: true,
+    }).start();
+  }, [activePopup, popupAnim]);
 
   // Compute popup position: centered on the marker, appearing above it.
   const popupStyle = React.useMemo(() => {
@@ -229,9 +268,23 @@ export function SpotsMap(props: {
 
       {/* JS overlay popup — dismissed instantly by setState, no native animation */}
       {activePopup && popupStyle ? (
-        <View style={[s.popupAnchor, popupStyle]} pointerEvents="box-none">
+        <Animated.View
+          style={[
+            s.popupAnchor,
+            popupStyle,
+            {
+              opacity: popupAnim,
+              transform: [
+                { translateY: popupAnim.interpolate({ inputRange: [0, 1], outputRange: [8, 0] }) },
+                { scale: popupAnim.interpolate({ inputRange: [0, 1], outputRange: [0.96, 1] }) },
+              ],
+            },
+          ]}
+          pointerEvents="box-none"
+        >
           <SpotPopup spot={activePopup.spot} />
-        </View>
+          <View style={s.popupTail} />
+        </Animated.View>
       ) : null}
     </View>
   );
@@ -241,6 +294,7 @@ const s = StyleSheet.create({
   /* ── popup overlay ── */
   popupAnchor: {
     position: "absolute",
+    alignItems: "center",
     // left, bottom, width set dynamically
   },
   popupCard: {
@@ -304,6 +358,17 @@ const s = StyleSheet.create({
     fontSize: 12,
     color: "#222",
     lineHeight: 18,
+  },
+  popupTail: {
+    width: 12,
+    height: 12,
+    marginTop: -1,
+    transform: [{ rotate: "45deg" }],
+    backgroundColor: "#fff",
+    borderRightWidth: 1,
+    borderBottomWidth: 1,
+    borderRightColor: "#e8e8e8",
+    borderBottomColor: "#e8e8e8",
   },
 
   /* ── saving pin ── */

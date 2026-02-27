@@ -44,4 +44,6 @@ export type Props = {
   onCancel: () => void;
   onSave: () => void;
 
+  /** While true, the Save button is disabled and shows a spinner. */
+  isSaving?: boolean;
 };

@@ -41,6 +41,11 @@ export default function MapScreen({ navigation }: any) {
   const [tagUsersLoading, setTagUsersLoading] = React.useState(false);
   const [activePartner, setActivePartner] = React.useState<TaggedUser | null>(null);
   const [partnerAnswer, setPartnerAnswer] = React.useState<PartnerAnswer>(null);
+  const [savingPin, setSavingPin] = React.useState<{
+    latitude: number;
+    longitude: number;
+    name: string;
+  } | null>(null);
 
   useFocusEffect(
     useCallback(() => {
@@ -83,12 +88,20 @@ export default function MapScreen({ navigation }: any) {
   );
 
   const spotCreation = useSpotCreation({
+    onSavingStarted: (coords, name) => {
+      setSavingPin({ latitude: coords.latitude, longitude: coords.longitude, name });
+    },
     onSaved: async () => {
       try {
         await refreshSpots();
       } catch (err) {
         console.error(err);
+      } finally {
+        setSavingPin(null);
       }
+    },
+    onSaveFailed: () => {
+      setSavingPin(null);
     },
   });
 
@@ -243,6 +256,7 @@ export default function MapScreen({ navigation }: any) {
         newSpotCoords={spotCreation.newSpotCoords}
         onDragEnd={spotCreation.updateCoords}
         onPressMap={() => setShowSuggestions(false)}
+        savingPin={savingPin}
       />
 
       {spotCreation.showNewSpotSheet && spotCreation.newSpotCoords && (
@@ -261,6 +275,7 @@ export default function MapScreen({ navigation }: any) {
           eligibleTagUsers={eligibleTagUsers}
           tagUsersLoading={tagUsersLoading}
           debugLabel="(CREATE)"
+          isSaving={spotCreation.isSaving}
           onChangeName={(v) => spotCreation.setField("name", v)}
           onChangeAtmosphere={(v) => spotCreation.setField("atmosphere", v)}
           onChangeDateScore={(v) => spotCreation.setField("dateScore", v)}
@@ -289,15 +304,18 @@ export default function MapScreen({ navigation }: any) {
             setPartnerAnswer(null);
             spotCreation.cancelNewSpot();
           }}
-          onSave={async () => {
-            await spotCreation.saveNewSpot(
-              photos.filter((p) => p.kind === "local"),
-              selectedTaggedUsers.map((u) => u.id)
-            );
+          onSave={() => {
+            // Capture before clearing state
+            const localPhotos = photos.filter((p) => p.kind === "local");
+            const tagIds = selectedTaggedUsers.map((u) => u.id);
+            // Clear immediately (form is about to close)
             setPhotos([]);
             setSelectedTaggedUsers([]);
             setActivePartner(null);
             setPartnerAnswer(null);
+            // Fire-and-forget: saveNewSpot closes the form, shows optimistic pin,
+            // then uploads photos in the background. Errors surface via Alert.
+            void spotCreation.saveNewSpot(localPhotos, tagIds);
           }}
         />
       )}

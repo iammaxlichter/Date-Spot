@@ -39,7 +39,7 @@ export function TopOverlay(props: {
       <View style={styles.searchBar}>
         <TextInput
           style={styles.searchInput}
-          placeholder="Search places or date spots…"
+          placeholder="Search places or date spots"
           value={searchQuery}
           onChangeText={onChangeSearch}
           returnKeyType="search"

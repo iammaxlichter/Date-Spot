@@ -29,6 +29,7 @@ function AvatarMarkerInner({ spot, onPress }: Props) {
 
   const handlePress = React.useCallback(
     (event: MarkerPressEvent) => {
+      event.stopPropagation?.();
       onPress?.(spot, event);
     },
     [onPress, spot]

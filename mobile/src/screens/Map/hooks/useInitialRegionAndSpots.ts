@@ -3,8 +3,9 @@ import type { Region } from "react-native-maps";
 import { Alert } from "react-native";
 import { getFollowedMapSpots, type MapSpot } from "../../../services/api/spots";
 import { DEFAULT_INITIAL_REGION } from "../constants";
+import type { SpotFilters } from "../../../features/filters/types";
 
-export function useInitialRegionAndSpots() {
+export function useInitialRegionAndSpots(filters?: SpotFilters) {
   const [region, setRegion] = useState<Region | null>(null);
   const [loading, setLoading] = useState(true);
   const [permissionDenied, setPermissionDenied] = useState(false);
@@ -17,7 +18,7 @@ export function useInitialRegionAndSpots() {
         const initialRegion: Region = { ...DEFAULT_INITIAL_REGION };
         setRegion(initialRegion);
 
-        const data = await getFollowedMapSpots();
+        const data = await getFollowedMapSpots(500, filters);
 
         console.log("Loaded spots:", data.length);
         setSpots(data);
@@ -28,7 +29,7 @@ export function useInitialRegionAndSpots() {
         setLoading(false);
       }
     })();
-  }, []);
+  }, [filters]);
 
   return {
     region,

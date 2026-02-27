@@ -18,6 +18,8 @@ export function TopOverlay(props: {
   onSelectSaved: (spot: MapSpot) => void;
   onSelectGoogle: (prediction: GooglePrediction) => void;
   onOpenFilters: () => void;
+  hasActiveFilters: boolean;
+  activeFilterCount: number;
   onAddSpot: () => void;
 }) {
   const {
@@ -31,6 +33,8 @@ export function TopOverlay(props: {
     onSelectSaved,
     onSelectGoogle,
     onOpenFilters,
+    hasActiveFilters,
+    activeFilterCount,
     onAddSpot,
   } = props;
 
@@ -70,8 +74,13 @@ export function TopOverlay(props: {
         <TouchableOpacity style={styles.filtersButton} onPress={onOpenFilters}>
           <MaterialIcons name="filter-list" size={20} color="#333" style={styles.filtersButtonIcon} />
           <Text style={styles.filtersButtonText}>Filters</Text>
+          {hasActiveFilters ? <View style={styles.filtersActiveDot} /> : null}
         </TouchableOpacity>
       </View>
+
+      {hasActiveFilters ? (
+        <Text style={styles.activeFiltersLabel}>Filters: {activeFilterCount} active</Text>
+      ) : null}
     </View>
   );
 }

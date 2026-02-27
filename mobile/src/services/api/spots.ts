@@ -1,5 +1,6 @@
 import { supabase } from "../supabase/client";
 import { fetchSpotTagsForSpotIds, type TaggedUser } from "./spotTags";
+import type { SpotFilters } from "../../features/filters/types";
 
 export type Spot = {
   id: string;
@@ -89,6 +90,13 @@ export type MapSpot = {
   };
 };
 
+export type MapPerson = {
+  user_id: string;
+  display_name: string;
+  username: string | null;
+  avatar_url: string | null;
+};
+
 type JoinedProfile = {
   id: string;
   avatar_url: string | null;
@@ -116,6 +124,109 @@ function normalizeJoinedProfile(input: unknown): JoinedProfile | null {
   if (!input) return null;
   if (Array.isArray(input)) return (input[0] as JoinedProfile | undefined) ?? null;
   return input as JoinedProfile;
+}
+
+function toAtmosphereFilterValues(values: number[]): string[] {
+  return values.map((v) => String(v));
+}
+
+async function signProfileAvatarUrls(
+  profileRows: Array<{ key: string; avatar_url: string | null }>
+): Promise<Map<string, string>> {
+  const avatarPathByKey = new Map<string, string>();
+  const avatarPaths = Array.from(
+    new Set(
+      profileRows
+        .map((row) => {
+          const path = extractProfilePicturePath(row.avatar_url);
+          if (path) avatarPathByKey.set(row.key, path);
+          return path;
+        })
+        .filter((v): v is string => !!v)
+    )
+  );
+
+  const signedAvatarByPath = new Map<string, string>();
+  if (avatarPaths.length > 0) {
+    const { data: signedData } = await supabase.storage
+      .from("profile_pictures")
+      .createSignedUrls(avatarPaths, 3600);
+
+    for (const item of signedData ?? []) {
+      if (item?.path && item?.signedUrl) {
+        signedAvatarByPath.set(item.path, item.signedUrl);
+      }
+    }
+  }
+
+  const resolvedByKey = new Map<string, string>();
+  for (const row of profileRows) {
+    const path = avatarPathByKey.get(row.key);
+    if (!path) continue;
+    const signed = signedAvatarByPath.get(path);
+    if (signed) resolvedByKey.set(row.key, signed);
+  }
+  return resolvedByKey;
+}
+
+async function resolvePeopleFilteredSpotIds(selectedUserIds: string[]): Promise<string[] | null> {
+  if (selectedUserIds.length === 0) return null;
+
+  const [{ data: creatorRows, error: creatorErr }, { data: taggedRows, error: taggedErr }] =
+    await Promise.all([
+      supabase.from("spots").select("id").in("user_id", selectedUserIds),
+      supabase.from("date_spot_tags").select("spot_id").in("tagged_user_id", selectedUserIds),
+    ]);
+
+  if (creatorErr) throw creatorErr;
+  if (taggedErr) throw taggedErr;
+
+  const ids = new Set<string>();
+  for (const row of (creatorRows ?? []) as Array<{ id: string }>) {
+    if (row.id) ids.add(row.id);
+  }
+  for (const row of (taggedRows ?? []) as Array<{ spot_id: string }>) {
+    if (row.spot_id) ids.add(row.spot_id);
+  }
+  return Array.from(ids);
+}
+
+function applyServerFiltersToSpotsQuery<TQuery>(query: TQuery, filters?: SpotFilters): TQuery {
+  if (!filters) return query;
+
+  let next = query as any;
+
+  if (filters.selectedVibes.length > 0) {
+    next = next.in("vibe", filters.selectedVibes);
+  }
+  if (filters.selectedAtmospheres.length > 0) {
+    next = next.in("atmosphere", toAtmosphereFilterValues(filters.selectedAtmospheres));
+  }
+  if (filters.selectedDateScores.length > 0) {
+    next = next.in("date_score", filters.selectedDateScores);
+  }
+  if (filters.selectedPriceBuckets.length > 0) {
+    next = next.in("price", filters.selectedPriceBuckets);
+  }
+  if (filters.selectedBestFors.length > 0) {
+    next = next.in("best_for", filters.selectedBestFors);
+  }
+  if (filters.selectedWouldReturn.length === 1) {
+    next = next.eq("would_return", filters.selectedWouldReturn[0]);
+  }
+
+  if (filters.sortOption === "newest") {
+    next = next.order("created_at", { ascending: false });
+  } else if (filters.sortOption === "oldest") {
+    next = next.order("created_at", { ascending: true });
+  } else if (filters.sortOption === "highestDateScore") {
+    next = next.order("date_score", { ascending: false, nullsFirst: false });
+  } else {
+    // highestAtmosphere is stored as text in current schema; fallback sort remains client-side.
+    next = next.order("created_at", { ascending: false });
+  }
+
+  return next as TQuery;
 }
 
 function toRadians(deg: number) {
@@ -149,8 +260,16 @@ async function requireUserId(): Promise<string> {
  * Flow: query `spots` rows visible by RLS (self + followed users), join each row to
  * `profiles`, then shape each result as `{ spot, author }` so UI can use author avatar.
  */
-export async function getFollowedDateSpots(limit = 25): Promise<FollowedDateSpot[]> {
-  const { data, error } = await supabase
+export async function getFollowedDateSpots(
+  limit = 25,
+  filters?: SpotFilters
+): Promise<FollowedDateSpot[]> {
+  const peopleSpotIds = await resolvePeopleFilteredSpotIds(filters?.selectedUserIds ?? []);
+  if (filters?.selectedUserIds?.length && peopleSpotIds && peopleSpotIds.length === 0) {
+    return [];
+  }
+
+  let query = supabase
     .from("spots")
     .select(
       `
@@ -158,9 +277,15 @@ export async function getFollowedDateSpots(limit = 25): Promise<FollowedDateSpot
       atmosphere,date_score,notes,vibe,price,best_for,would_return,
       profiles!inner(id,name,username,avatar_url)
     `
-    )
-    .order("created_at", { ascending: false })
-    .limit(limit);
+    );
+
+  if (peopleSpotIds && peopleSpotIds.length > 0) {
+    query = query.in("id", peopleSpotIds);
+  }
+
+  query = applyServerFiltersToSpotsQuery(query, filters).limit(limit);
+
+  const { data, error } = await query;
 
   if (error) throw error;
 
@@ -198,17 +323,28 @@ export async function getFollowedDateSpots(limit = 25): Promise<FollowedDateSpot
   });
 }
 
-export async function getFollowedMapSpots(limit = 500): Promise<MapSpot[]> {
-  const { data, error } = await supabase
+export async function getFollowedMapSpots(limit = 500, filters?: SpotFilters): Promise<MapSpot[]> {
+  const peopleSpotIds = await resolvePeopleFilteredSpotIds(filters?.selectedUserIds ?? []);
+  if (filters?.selectedUserIds?.length && peopleSpotIds && peopleSpotIds.length === 0) {
+    return [];
+  }
+
+  let query = supabase
     .from("spots")
     .select(
       `
       id,name,latitude,longitude,user_id,created_at,atmosphere,date_score,notes,vibe,price,best_for,would_return,
       profiles:profiles!spots_user_id_fkey(id,avatar_url,username,name)
     `
-    )
-    .order("created_at", { ascending: false })
-    .limit(limit);
+    );
+
+  if (peopleSpotIds && peopleSpotIds.length > 0) {
+    query = query.in("id", peopleSpotIds);
+  }
+
+  query = applyServerFiltersToSpotsQuery(query, filters).limit(limit);
+
+  const { data, error } = await query;
 
   if (error) throw error;
 
@@ -289,6 +425,84 @@ export async function getFollowedMapSpots(limit = 500): Promise<MapSpot[]> {
     },
     };
   });
+}
+
+/**
+ * Lightweight list of people represented on the map (same source visibility as map spots).
+ * Used by FiltersScreen People section (id + display name + avatar).
+ */
+export async function getPeopleOnMyMap(limit = 500): Promise<MapPerson[]> {
+  const { data, error } = await supabase
+    .from("spots")
+    .select(
+      `
+      user_id,
+      created_at,
+      profiles:profiles!spots_user_id_fkey(id,avatar_url,username,name)
+    `
+    )
+    .order("created_at", { ascending: false })
+    .limit(limit);
+
+  if (error) throw error;
+
+  const rows = (data ?? []) as Array<{
+    user_id: string;
+    created_at: string;
+    profiles: unknown;
+  }>;
+
+  const byUserId = new Map<
+    string,
+    { user_id: string; display_name: string; username: string | null; avatar_url: string | null }
+  >();
+
+  for (const row of rows) {
+    if (!row.user_id || byUserId.has(row.user_id)) continue;
+    const profile = normalizeJoinedProfile(row.profiles);
+    const displayName =
+      (profile?.name ?? "").trim() ||
+      (profile?.username ? `@${profile.username}` : "").trim() ||
+      "Unknown user";
+
+    byUserId.set(row.user_id, {
+      user_id: row.user_id,
+      display_name: displayName,
+      username: profile?.username ?? null,
+      avatar_url: profile?.avatar_url ?? null,
+    });
+  }
+
+  const people = Array.from(byUserId.values());
+  const signedByUserId = await signProfileAvatarUrls(
+    people.map((person) => ({ key: person.user_id, avatar_url: person.avatar_url }))
+  );
+
+  return people
+    .map((person) => ({
+      ...person,
+      avatar_url: signedByUserId.get(person.user_id) ?? person.avatar_url,
+    }))
+    .sort((a, b) => a.display_name.localeCompare(b.display_name));
+}
+
+export async function getMapSpotVibes(limit = 500): Promise<string[]> {
+  const { data, error } = await supabase
+    .from("spots")
+    .select("vibe,created_at")
+    .not("vibe", "is", null)
+    .order("created_at", { ascending: false })
+    .limit(limit);
+
+  if (error) throw error;
+
+  return Array.from(
+    new Set(
+      ((data ?? []) as Array<{ vibe: string | null }>)
+        .map((row) => (row.vibe ?? "").trim())
+        .filter((v) => v.length > 0)
+    )
+  ).sort((a, b) => a.localeCompare(b));
 }
 
 /**

@@ -8,6 +8,8 @@ import FeedScreen from "../screens/Feed/FeedScreen";
 import type { RootStackParamList } from "./types";
 import { FeedHeader } from "./components/FeedHeader";
 import { navStyles } from "./styles";
+import { useSpotFiltersStore } from "../stores/spotFiltersStore";
+import { getActiveSpotFilterCount, hasActiveSpotFilters } from "../utils/filters";
 
 export type AppDrawerParamList = {
   Feed: undefined;
@@ -65,6 +67,10 @@ function AppDrawerContent(props: DrawerContentComponentProps) {
 }
 
 export function AppDrawerNavigator() {
+  const filters = useSpotFiltersStore((state) => state.filters);
+  const filtersActive = hasActiveSpotFilters(filters);
+  const activeFilterCount = getActiveSpotFilterCount(filters);
+
   return (
     <Drawer.Navigator
       initialRouteName="Feed"
@@ -92,6 +98,12 @@ export function AppDrawerNavigator() {
           header: () => (
             <FeedHeader
               onOpenDrawer={() => navigation.openDrawer()}
+              onOpenFilters={() => {
+                const parent = navigation.getParent<NativeStackNavigationProp<RootStackParamList>>();
+                parent?.navigate("Filters");
+              }}
+              hasActiveFilters={filtersActive}
+              activeFilterCount={activeFilterCount}
               onProfile={() => {
                 const parent = navigation.getParent<NativeStackNavigationProp<RootStackParamList>>();
                 parent?.navigate("Profile");

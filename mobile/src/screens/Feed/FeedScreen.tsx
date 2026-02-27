@@ -19,6 +19,9 @@ import { PartnershipRow, getAcceptedPartnerIdsForUsers } from "../../services/ap
 import { fetchSpotTagsForSpotIds, type TaggedUser } from "../../services/api/spotTags";
 import { buildTagPresentation } from "../../features/tags/tagPresentation";
 import { getFollowedDateSpots } from "../../services/api/spots";
+import { applySpotFilters } from "../../utils/filters";
+import { useSpotFiltersStore } from "../../stores/spotFiltersStore";
+import type { SpotFilters } from "../../features/filters/types";
 
 type SpotPhotoPreview = {
   id: string;
@@ -82,14 +85,14 @@ function timeAgo(iso: string) {
 }
 
 
-async function fetchFeedData(): Promise<FeedData> {
+async function fetchFeedData(filters: SpotFilters): Promise<FeedData> {
   const { data: userRes, error: userErr } = await supabase.auth.getUser();
   if (userErr) throw userErr;
   const user = userRes.user;
   if (!user) throw new Error("Not authenticated");
 
   const [spotsData, acceptedResult, pendingResult, eventsResult] = await Promise.all([
-    getFollowedDateSpots(25),
+    getFollowedDateSpots(25, filters),
     supabase
       .from("partnerships")
       .select("id")
@@ -222,10 +225,11 @@ export default function FeedScreen() {
   const navigation = useNavigation<any>();
   const bannerLockRef = React.useRef(false);
   const [localHideAllBanners, setLocalHideAllBanners] = React.useState(false);
+  const filters = useSpotFiltersStore((state) => state.filters);
 
   const { data, isLoading, isRefetching, refetch, isError, error } = useQuery<FeedData>({
-    queryKey: ["feed"],
-    queryFn: fetchFeedData,
+    queryKey: ["feed", filters],
+    queryFn: () => fetchFeedData(filters),
     staleTime: 30_000,
   });
 
@@ -241,7 +245,40 @@ export default function FeedScreen() {
     }, [refetch])
   );
 
-  const feedItems = data?.feedItems ?? [];
+  const feedEvents = React.useMemo(
+    () =>
+      (data?.feedItems ?? []).filter(
+        (item): item is Extract<FeedItem, { kind: "event" }> => item.kind === "event"
+      ),
+    [data?.feedItems]
+  );
+  const filteredSpots = React.useMemo(
+    () => applySpotFilters(data?.spots ?? [], filters),
+    [data?.spots, filters]
+  );
+  const feedItems = React.useMemo(() => {
+    const spotItems: FeedItem[] = filteredSpots.map((spot) => ({
+      kind: "spot",
+      created_at: spot.created_at,
+      spot,
+    }));
+
+    if (filters.sortOption === "newest" || filters.sortOption === "oldest") {
+      const all = [...spotItems, ...feedEvents];
+      all.sort((a, b) => {
+        const delta = new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+        return filters.sortOption === "newest" ? delta : -delta;
+      });
+      return all;
+    }
+
+    return [
+      ...spotItems,
+      ...[...feedEvents].sort(
+        (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      ),
+    ];
+  }, [feedEvents, filteredSpots, filters.sortOption]);
   const currentUserId = data?.userId ?? null;
   const pendingIncoming = data?.pendingIncoming ?? [];
   const hideAllBanners =

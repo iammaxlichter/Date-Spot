@@ -27,6 +27,19 @@ export const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
   },
+  activeFiltersLabel: {
+    marginTop: 6,
+    alignSelf: "flex-end",
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#1b5fc6",
+    backgroundColor: "#eef4ff",
+    borderWidth: 1,
+    borderColor: "#d7e5ff",
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
 
   filtersButton: {
     marginLeft: "auto",
@@ -50,6 +63,13 @@ export const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "600",
     color: "#333",
+  },
+  filtersActiveDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: "#d32f2f",
+    marginLeft: 6,
   },
 
   suggestionsWrapper: {

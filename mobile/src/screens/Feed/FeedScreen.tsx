@@ -12,6 +12,7 @@ import {
   Alert,
 } from "react-native";
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
+import { useQuery } from "@tanstack/react-query";
 import { supabase } from "../../services/supabase/client";
 import { PendingPartnerBanner } from "./components/PendingPartnerBanner";
 import { PartnershipRow, getAcceptedPartnerIdsForUsers } from "../../services/api/partnerships";
@@ -60,6 +61,14 @@ type FeedItem =
   | { kind: "spot"; created_at: string; spot: FeedRow }
   | { kind: "event"; created_at: string; event: FeedEvent };
 
+type FeedData = {
+  feedItems: FeedItem[];
+  spots: FeedRow[];
+  userId: string;
+  pendingIncoming: PartnershipRow[];
+  hasAccepted: boolean;
+};
+
 function timeAgo(iso: string) {
   const t = new Date(iso).getTime();
   const s = Math.max(0, Math.floor((Date.now() - t) / 1000));
@@ -72,209 +81,176 @@ function timeAgo(iso: string) {
   return `${d}d`;
 }
 
-export default function FeedScreen() {
-  const navigation = useNavigation<any>();
 
-  const [loading, setLoading] = React.useState(true);
-  const [refreshing, setRefreshing] = React.useState(false);
-  const [rows, setRows] = React.useState<FeedRow[]>([]);
-  const [currentUserId, setCurrentUserId] = React.useState<string | null>(null);
-  const [pendingIncoming, setPendingIncoming] = React.useState<PartnershipRow[]>([]);
-  const [feedItems, setFeedItems] = React.useState<FeedItem[]>([]);
-  const [hideAllBanners, setHideAllBanners] = React.useState(false);
-  const [bannersReady, setBannersReady] = React.useState(false);
-  const bannerLockRef = React.useRef(false);
-  const loadSeqRef = React.useRef(0);
+async function fetchFeedData(): Promise<FeedData> {
+  const { data: userRes, error: userErr } = await supabase.auth.getUser();
+  if (userErr) throw userErr;
+  const user = userRes.user;
+  if (!user) throw new Error("Not authenticated");
 
-  const loadFeed = React.useCallback(async () => {
-    const seq = ++loadSeqRef.current;
-    const isStale = () => seq !== loadSeqRef.current;
+  const [spotsData, acceptedResult, pendingResult, eventsResult] = await Promise.all([
+    getFollowedDateSpots(25),
+    supabase
+      .from("partnerships")
+      .select("id")
+      .eq("status", "accepted")
+      .or(`user_a.eq.${user.id},user_b.eq.${user.id}`)
+      .maybeSingle(),
+    supabase
+      .from("partnerships")
+      .select("id,user_a,user_b,status,requested_by,created_at,responded_at")
+      .eq("status", "pending")
+      .or(`user_a.eq.${user.id},user_b.eq.${user.id}`)
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("feed_events")
+      .select("id,created_at,message,type")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false })
+      .limit(10),
+  ]);
 
-    try {
-      if (!isStale()) setBannersReady(false);
+  if (acceptedResult.error) throw acceptedResult.error;
+  if (pendingResult.error) throw pendingResult.error;
+  if (eventsResult.error) throw eventsResult.error;
 
-      const { data: userRes, error: userErr } = await supabase.auth.getUser();
-      if (userErr) throw userErr;
-      const user = userRes.user;
-      if (!user) throw new Error("Not authenticated");
+  const spotsRaw: Omit<FeedRow, "photos" | "tagged_users" | "partner_tagged_user_id">[] = (
+    spotsData ?? []
+  ).map((item) => ({
+    ...item.spot,
+    author: item.author,
+  }));
 
-      if (!isStale()) setCurrentUserId(user.id);
-      const spotsPromise = getFollowedDateSpots(25);
+  const spotIds = spotsRaw.map((s) => s.id);
+  const authorIds = Array.from(new Set(spotsRaw.map((s) => s.user_id)));
 
-      const acceptedPromise = supabase
-        .from("partnerships")
-        .select("id")
-        .eq("status", "accepted")
-        .or(`user_a.eq.${user.id},user_b.eq.${user.id}`)
-        .maybeSingle();
+  let spots: FeedRow[] = spotsRaw.map((s) => ({
+    ...s,
+    photos: [],
+    tagged_users: [],
+    partner_tagged_user_id: null,
+  }));
 
-      const pendingPromise = supabase
-        .from("partnerships")
-        .select("id,user_a,user_b,status,requested_by,created_at,responded_at")
-        .eq("status", "pending")
-        .or(`user_a.eq.${user.id},user_b.eq.${user.id}`)
-        .order("created_at", { ascending: false });
+  if (spotsRaw.length > 0) {
+    const [partnerByAuthor, photoResult, tagsBySpot] = await Promise.all([
+      getAcceptedPartnerIdsForUsers(authorIds),
+      supabase
+        .from("spot_photos")
+        .select("id,spot_id,path,position,created_at")
+        .in("spot_id", spotIds)
+        .order("position", { ascending: true })
+        .order("created_at", { ascending: true }),
+      fetchSpotTagsForSpotIds(spotIds),
+    ]);
 
-      const eventsPromise = supabase
-        .from("feed_events")
-        .select("id,created_at,message,type")
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false })
-        .limit(10);
-
-      const [
-        spotsData,
-        { data: acceptedData, error: acceptedErr },
-        { data: pendingData, error: pendingErr },
-        { data: eventsData, error: eventsErr },
-      ] = await Promise.all([spotsPromise, acceptedPromise, pendingPromise, eventsPromise]);
-
-      if (acceptedErr) throw acceptedErr;
-      if (pendingErr) throw pendingErr;
-      if (eventsErr) throw eventsErr;
-      if (isStale()) return;
-
-      const incoming = (pendingData ?? []).filter((p: any) => p.requested_by !== user.id);
-      const serverHasAccepted = !!acceptedData?.id;
-      const shouldHide = bannerLockRef.current || serverHasAccepted;
-      setHideAllBanners(shouldHide);
-      setPendingIncoming(incoming);
-      setBannersReady(true);
-
-      const spotsRaw: Omit<FeedRow, "photos" | "tagged_users" | "partner_tagged_user_id">[] = (
-        spotsData ?? []
-      ).map((item) => ({
-        ...item.spot,
-        author: item.author,
-      }));
-      const partnerByAuthor = await getAcceptedPartnerIdsForUsers(
-        Array.from(new Set(spotsRaw.map((s) => s.user_id)))
-      );
-      let spots: FeedRow[] = spotsRaw.map((s) => ({
+    if (photoResult.error) {
+      console.error("[feed] failed to load spot photos:", photoResult.error);
+      spots = spotsRaw.map((s) => ({
         ...s,
         photos: [],
-        tagged_users: [],
+        tagged_users: tagsBySpot[s.id] ?? [],
         partner_tagged_user_id: partnerByAuthor[s.user_id] ?? null,
       }));
+    } else {
+      const photoRows =
+        (photoResult.data as Array<{
+          id: string;
+          spot_id: string;
+          path: string;
+          position: number;
+          created_at: string;
+        }>) ?? [];
 
-      if (spotsRaw.length > 0) {
-        const spotIds = spotsRaw.map((s) => s.id);
-        const [{ data: photoRows, error: photosErr }, tagsBySpot] = await Promise.all([
-          supabase
-            .from("spot_photos")
-            .select("id,spot_id,path,position,created_at")
-            .in("spot_id", spotIds)
-            .order("position", { ascending: true })
-            .order("created_at", { ascending: true }),
-          fetchSpotTagsForSpotIds(spotIds),
-        ]);
+      const paths = photoRows.map((r) => r.path);
+      const signedByPath = new Map<string, string>();
 
-        if (photosErr) {
-          console.error("[feed] failed to load spot photos:", photosErr);
-          spots = spotsRaw.map((s) => ({
-            ...s,
-            photos: [],
-            tagged_users: tagsBySpot[s.id] ?? [],
-            partner_tagged_user_id: partnerByAuthor[s.user_id] ?? null,
-          }));
+      if (paths.length > 0) {
+        const { data: signedData, error: signedErr } = await supabase.storage
+          .from("spot-photos")
+          .createSignedUrls(paths, 3600);
+
+        if (signedErr) {
+          console.error("[feed] failed to sign spot photos:", signedErr);
         } else {
-          const rows =
-            (photoRows as Array<{
-              id: string;
-              spot_id: string;
-              path: string;
-              position: number;
-              created_at: string;
-            }>) ?? [];
-
-          const paths = rows.map((r) => r.path);
-          const signedByPath = new Map<string, string>();
-
-          if (paths.length > 0) {
-            const { data: signedData, error: signedErr } = await supabase.storage
-              .from("spot-photos")
-              .createSignedUrls(paths, 3600);
-
-            if (signedErr) {
-              console.error("[feed] failed to sign spot photos:", signedErr);
-            } else {
-              for (const item of signedData ?? []) {
-                if (item?.path && item?.signedUrl) signedByPath.set(item.path, item.signedUrl);
-              }
-            }
+          for (const item of signedData ?? []) {
+            if (item?.path && item?.signedUrl) signedByPath.set(item.path, item.signedUrl);
           }
-
-          const photosBySpot = new Map<string, SpotPhotoPreview[]>();
-          for (const r of rows) {
-            const list = photosBySpot.get(r.spot_id) ?? [];
-            list.push({
-              id: r.id,
-              path: r.path,
-              position: r.position,
-              signedUrl: signedByPath.get(r.path) ?? "",
-            });
-            photosBySpot.set(r.spot_id, list);
-          }
-
-          spots = spotsRaw.map((s) => ({
-            ...s,
-            photos: (photosBySpot.get(s.id) ?? []).filter((p) => !!p.signedUrl),
-            tagged_users: tagsBySpot[s.id] ?? [],
-            partner_tagged_user_id: partnerByAuthor[s.user_id] ?? null,
-          }));
         }
       }
 
-      const evs = (eventsData ?? []) as FeedEvent[];
-      const merged: FeedItem[] = [
-        ...spots.map((spot) => ({ kind: "spot" as const, created_at: spot.created_at, spot })),
-        ...evs.map((event) => ({ kind: "event" as const, created_at: event.created_at, event })),
-      ].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+      const photosBySpot = new Map<string, SpotPhotoPreview[]>();
+      for (const r of photoRows) {
+        const list = photosBySpot.get(r.spot_id) ?? [];
+        list.push({
+          id: r.id,
+          path: r.path,
+          position: r.position,
+          signedUrl: signedByPath.get(r.path) ?? "",
+        });
+        photosBySpot.set(r.spot_id, list);
+      }
 
-      setFeedItems(merged);
-      setRows(spots);
-    } catch (e: any) {
-      if (seq !== loadSeqRef.current) return;
-      throw e;
+      spots = spotsRaw.map((s) => ({
+        ...s,
+        photos: (photosBySpot.get(s.id) ?? []).filter((p) => !!p.signedUrl),
+        tagged_users: tagsBySpot[s.id] ?? [],
+        partner_tagged_user_id: partnerByAuthor[s.user_id] ?? null,
+      }));
     }
-  }, []);
+  }
+
+  const incoming = (pendingResult.data ?? []).filter(
+    (p: any) => p.requested_by !== user.id
+  ) as PartnershipRow[];
+
+  const evs = (eventsResult.data ?? []) as FeedEvent[];
+  const feedItems: FeedItem[] = [
+    ...spots.map((spot) => ({ kind: "spot" as const, created_at: spot.created_at, spot })),
+    ...evs.map((event) => ({ kind: "event" as const, created_at: event.created_at, event })),
+  ].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+
+  return {
+    feedItems,
+    spots,
+    userId: user.id,
+    pendingIncoming: incoming,
+    hasAccepted: !!acceptedResult.data?.id,
+  };
+}
+
+export default function FeedScreen() {
+  const navigation = useNavigation<any>();
+  const bannerLockRef = React.useRef(false);
+  const [localHideAllBanners, setLocalHideAllBanners] = React.useState(false);
+
+  const { data, isLoading, isRefetching, refetch, isError, error } = useQuery<FeedData>({
+    queryKey: ["feed"],
+    queryFn: fetchFeedData,
+    staleTime: 30_000,
+  });
 
   React.useEffect(() => {
-    (async () => {
-      try {
-        setLoading(true);
-        await loadFeed();
-      } catch (e: any) {
-        console.error(e);
-        Alert.alert("Error", e?.message ?? "Failed to load feed.");
-      } finally {
-        setLoading(false);
-      }
-    })();
-  }, [loadFeed]);
+    if (isError && error) {
+      Alert.alert("Error", (error as Error)?.message ?? "Failed to load feed.");
+    }
+  }, [isError, error]);
 
   useFocusEffect(
     React.useCallback(() => {
-      void (async () => {
-        try {
-          await loadFeed();
-        } catch (e) {
-          console.error("Feed focus refresh failed:", e);
-        }
-      })();
-    }, [loadFeed])
+      void refetch();
+    }, [refetch])
   );
 
+  const feedItems = data?.feedItems ?? [];
+  const currentUserId = data?.userId ?? null;
+  const pendingIncoming = data?.pendingIncoming ?? [];
+  const hideAllBanners =
+    localHideAllBanners || bannerLockRef.current || (data?.hasAccepted ?? false);
+  const bannersReady = !isLoading;
+
   const onRefresh = React.useCallback(async () => {
-    try {
-      setRefreshing(true);
-      await loadFeed();
-    } catch (e: any) {
-      Alert.alert("Error", e?.message ?? "Failed to refresh feed.");
-    } finally {
-      setRefreshing(false);
-    }
-  }, [loadFeed]);
+    await refetch();
+  }, [refetch]);
 
   const renderItem = ({ item }: { item: FeedItem }) => {
     if (item.kind === "event") {
@@ -300,8 +276,8 @@ export default function FeedScreen() {
     const username = author?.username
       ? `@${author.username}`
       : author?.name
-      ? author.name
-      : "@unknown";
+        ? author.name
+        : "@unknown";
 
     const goProfile = (userId: string) => {
       if (currentUserId && userId === currentUserId) {
@@ -396,7 +372,7 @@ export default function FeedScreen() {
     );
   };
 
-  if (loading) {
+  if (isLoading) {
     return (
       <View style={[s.screen, { justifyContent: "center", alignItems: "center" }]}>
         <ActivityIndicator size="large" />
@@ -413,26 +389,25 @@ export default function FeedScreen() {
           <View>
             {bannersReady && currentUserId && pendingIncoming.length > 0 && !hideAllBanners
               ? pendingIncoming.map((partnership) => (
-                  <PendingPartnerBanner
-                    key={partnership.id}
-                    me={currentUserId}
-                    partnership={partnership}
-                    onResolved={() => loadFeed()}
-                    onAnyAccepted={() => {
-                      bannerLockRef.current = true;
-                      setHideAllBanners(true);
-                      setPendingIncoming([]);
-                      setBannersReady(true);
-                    }}
-                  />
-                ))
+                <PendingPartnerBanner
+                  key={partnership.id}
+                  me={currentUserId}
+                  partnership={partnership}
+                  onResolved={() => void refetch()}
+                  onAnyAccepted={() => {
+                    bannerLockRef.current = true;
+                    setLocalHideAllBanners(true); // instant hide without waiting for refetch
+                    void refetch();
+                  }}
+                />
+              ))
               : null}
           </View>
         }
         keyExtractor={(x) => (x.kind === "spot" ? `spot:${x.spot.id}` : `event:${x.event.id}`)}
         renderItem={renderItem}
         contentContainerStyle={{ padding: 14, paddingBottom: 110 }}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+        refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={onRefresh} />}
         ListEmptyComponent={
           <View style={s.empty}>
             <Text style={s.emptyTitle}>No spots yet</Text>
@@ -440,7 +415,7 @@ export default function FeedScreen() {
           </View>
         }
         ListFooterComponent={
-          rows.length > 0 ? (
+          feedItems.length > 0 ? (
             <View style={s.footer}>
               <Text style={s.footerText}>You&apos;ve reached the bottom of your feed!</Text>
             </View>

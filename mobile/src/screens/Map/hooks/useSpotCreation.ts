@@ -124,11 +124,14 @@ async function requireUserId(): Promise<string> {
 /* ============================================================
    Hook
    ============================================================ */
-export function useSpotCreation(params: { onSaved: (place: any) => void }) {
-  const { onSaved } = params;
-
+export function useSpotCreation(params: {
+  onSaved: (place: any) => Promise<void> | void;
+  onSavingStarted?: (coords: Coords, name: string) => void;
+  onSaveFailed?: () => void;
+}) {
   const [isPlacingPin, setIsPlacingPin] = useState(false);
   const [showNewSpotSheet, setShowNewSpotSheet] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   const [draft, setDraft] = useState<NewSpotDraft>(() => makeEmptyDraft(null));
 
@@ -173,6 +176,8 @@ export function useSpotCreation(params: { onSaved: (place: any) => void }) {
     photos: { id: string; uri: string; mimeType: string }[] = [],
     taggedUserIds: string[] = []
   ) => {
+    // Guard: prevent re-entry if already saving (rapid double-tap protection)
+    if (isSaving) return;
     if (!draft.coords) return;
 
     if (!draft.name.trim()) {
@@ -180,14 +185,27 @@ export function useSpotCreation(params: { onSaved: (place: any) => void }) {
       return;
     }
 
+    setIsSaving(true);
+
+    // Capture draft values before any state changes
+    const coords = draft.coords;
+    const name = draft.name.trim();
+
+    // Dismiss the form immediately so the user is back on the map
+    setShowNewSpotSheet(false);
+    setIsPlacingPin(false);
+
+    // Tell the map to show an optimistic pin at the chosen location
+    params.onSavingStarted?.(coords, name);
+
     try {
       const userId = await requireUserId();
 
       const payload = {
         user_id: userId,
-        name: draft.name.trim(),
-        latitude: draft.coords.latitude,
-        longitude: draft.coords.longitude,
+        name,
+        latitude: coords.latitude,
+        longitude: coords.longitude,
 
         atmosphere: draft.atmosphere ? String(draft.atmosphere) : null,
         date_score: draft.dateScore ? Number(draft.dateScore) : null,
@@ -209,7 +227,11 @@ export function useSpotCreation(params: { onSaved: (place: any) => void }) {
       if (error) throw error;
       if (!data) throw new Error("Failed to save spot");
 
-      // Upload photos AFTER spot exists
+      // Refresh the map now (before photos upload) so the real pin appears
+      // and the optimistic pin is cleared. Awaited so photos start after refresh.
+      await params.onSaved(data);
+
+      // Upload photos after the map has the real pin
       if (photos.length > 0) {
         await uploadSpotPhotos({
           spotId: data.id,
@@ -218,19 +240,18 @@ export function useSpotCreation(params: { onSaved: (place: any) => void }) {
         });
       }
 
-      // Save tagged users after spot exists.
+      // Save tagged users
       await upsertSpotTags(data.id, taggedUserIds);
-
-      onSaved(data);
 
       Alert.alert("Success!", "Your date spot has been saved.");
 
-      setShowNewSpotSheet(false);
-      setIsPlacingPin(false);
       setDraft(makeEmptyDraft(null));
     } catch (err) {
       console.error(err);
       Alert.alert("Error", "Failed to save date spot.");
+      params.onSaveFailed?.();
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -238,6 +259,7 @@ export function useSpotCreation(params: { onSaved: (place: any) => void }) {
     // state
     isPlacingPin,
     showNewSpotSheet,
+    isSaving,
     draft,
     newSpotCoords,
 

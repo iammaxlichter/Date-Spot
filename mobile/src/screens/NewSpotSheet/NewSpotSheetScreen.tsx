@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   Keyboard,
   ScrollView,
+  ActivityIndicator,
 } from "react-native";
 import { styles } from "./styles";
 import { sanitizeOneToTenInput } from "../../app/utils/numberInputValidation";
@@ -49,6 +50,7 @@ export function NewSpotSheetScreen({
   onChangePartnerAnswer,
   onCancel,
   onSave,
+  isSaving = false,
 }: Props) {
   const vibePresets: VibePreset[] = [
     "Chill",
@@ -366,17 +368,26 @@ export function NewSpotSheetScreen({
 
           <View style={styles.actionsRow}>
             <TouchableOpacity
-              style={[styles.actionButton, styles.cancelButton]}
+              style={[styles.actionButton, styles.cancelButton, isSaving && { opacity: 0.4 }]}
               onPress={onCancel}
+              disabled={isSaving}
             >
               <Text style={styles.cancelText}>Cancel</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={[styles.actionButton, styles.saveButton]}
+              style={[styles.actionButton, styles.saveButton, isSaving && { opacity: 0.7 }]}
               onPress={onSave}
+              disabled={isSaving}
             >
-              <Text style={styles.saveText}>Save</Text>
+              {isSaving ? (
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                  <ActivityIndicator size="small" color="#fff" />
+                  <Text style={styles.saveText}>Saving…</Text>
+                </View>
+              ) : (
+                <Text style={styles.saveText}>Save</Text>
+              )}
             </TouchableOpacity>
           </View>
       </ScrollView>

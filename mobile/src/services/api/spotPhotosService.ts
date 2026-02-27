@@ -4,7 +4,6 @@ import type { ExistingSpotPhoto, SpotPhotoItem } from "../../types/spotPhotos";
 
 const BUCKET = "spot-photos";
 
-// DB row shape we select
 type SpotPhotoRow = {
     id: string;
     path: string;
@@ -15,9 +14,7 @@ function isExisting(p: SpotPhotoItem): p is ExistingSpotPhoto {
     return (p as any)?.kind === "existing";
 }
 
-// Heuristic for "local" photos (newly added on device)
 function isLocal(p: SpotPhotoItem): boolean {
-    // match whatever your local photo object uses
     return (p as any)?.kind === "local" || !!(p as any)?.localUri || !!(p as any)?.uri;
 }
 
@@ -246,14 +243,18 @@ export async function syncSpotPhotosOnEdit(params: {
 
     if (orderedDbItems.length > 0) {
         // Use UPDATE (not UPSERT) to avoid triggering insert-path RLS checks.
-        for (const item of orderedDbItems) {
-            const { error: posErr } = await supabase
-                .from("spot_photos")
-                .update({ position: item.position })
-                .eq("id", item.id)
-                .eq("spot_id", spotId)
-                .eq("user_id", userId);
-
+        // Run all position updates in parallel — was N sequential round-trips before.
+        const results = await Promise.all(
+            orderedDbItems.map((item) =>
+                supabase
+                    .from("spot_photos")
+                    .update({ position: item.position })
+                    .eq("id", item.id)
+                    .eq("spot_id", spotId)
+                    .eq("user_id", userId)
+            )
+        );
+        for (const { error: posErr } of results) {
             if (posErr) {
                 console.error("[spotPhotos] position update error:", posErr);
                 throw posErr;

@@ -19,7 +19,7 @@ import { PartnershipRow, getAcceptedPartnerIdsForUsers } from "../../services/ap
 import { fetchSpotTagsForSpotIds, type TaggedUser } from "../../services/api/spotTags";
 import { buildTagPresentation } from "../../features/tags/tagPresentation";
 import { getFollowedDateSpots } from "../../services/api/spots";
-import { applySpotFilters } from "../../utils/filters";
+import { applySpotFilters, hasActiveSpotContentFilters } from "../../utils/filters";
 import { useSpotFiltersStore } from "../../stores/spotFiltersStore";
 import type { SpotFilters } from "../../features/filters/types";
 
@@ -226,6 +226,7 @@ export default function FeedScreen() {
   const bannerLockRef = React.useRef(false);
   const [localHideAllBanners, setLocalHideAllBanners] = React.useState(false);
   const filters = useSpotFiltersStore((state) => state.filters);
+  const showRelationshipUpdates = useSpotFiltersStore((state) => state.showRelationshipUpdates);
 
   const { data, isLoading, isRefetching, refetch, isError, error } = useQuery<FeedData>({
     queryKey: ["feed", filters],
@@ -256,15 +257,21 @@ export default function FeedScreen() {
     () => applySpotFilters(data?.spots ?? [], filters),
     [data?.spots, filters]
   );
+  const hideNonSpotFeedItems = React.useMemo(
+    () => hasActiveSpotContentFilters(filters),
+    [filters]
+  );
   const feedItems = React.useMemo(() => {
     const spotItems: FeedItem[] = filteredSpots.map((spot) => ({
       kind: "spot",
       created_at: spot.created_at,
       spot,
     }));
+    const visibleEvents =
+      hideNonSpotFeedItems || !showRelationshipUpdates ? [] : feedEvents;
 
     if (filters.sortOption === "newest" || filters.sortOption === "oldest") {
-      const all = [...spotItems, ...feedEvents];
+      const all = [...spotItems, ...visibleEvents];
       all.sort((a, b) => {
         const delta = new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
         return filters.sortOption === "newest" ? delta : -delta;
@@ -274,11 +281,11 @@ export default function FeedScreen() {
 
     return [
       ...spotItems,
-      ...[...feedEvents].sort(
+      ...[...visibleEvents].sort(
         (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
       ),
     ];
-  }, [feedEvents, filteredSpots, filters.sortOption]);
+  }, [feedEvents, filteredSpots, filters.sortOption, hideNonSpotFeedItems, showRelationshipUpdates]);
   const currentUserId = data?.userId ?? null;
   const pendingIncoming = data?.pendingIncoming ?? [];
   const hideAllBanners =

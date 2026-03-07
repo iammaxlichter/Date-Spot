@@ -40,6 +40,7 @@ function AvatarMarkerInner({ spot, onPress }: Props) {
       coordinate={coordinate}
       tracksViewChanges={tracksViewChanges}
       anchor={MARKER_ANCHOR}
+      zIndex={1}
       onPress={handlePress}
     >
       <View style={styles.shell} pointerEvents="none">

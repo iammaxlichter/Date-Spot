@@ -68,8 +68,9 @@ function AppDrawerContent(props: DrawerContentComponentProps) {
 
 export function AppDrawerNavigator() {
   const filters = useSpotFiltersStore((state) => state.filters);
-  const filtersActive = hasActiveSpotFilters(filters);
-  const activeFilterCount = getActiveSpotFilterCount(filters);
+  const showRelationshipUpdates = useSpotFiltersStore((state) => state.showRelationshipUpdates);
+  const filtersActive = hasActiveSpotFilters(filters) || !showRelationshipUpdates;
+  const activeFilterCount = getActiveSpotFilterCount(filters) + (showRelationshipUpdates ? 0 : 1);
 
   return (
     <Drawer.Navigator
@@ -100,7 +101,7 @@ export function AppDrawerNavigator() {
               onOpenDrawer={() => navigation.openDrawer()}
               onOpenFilters={() => {
                 const parent = navigation.getParent<NativeStackNavigationProp<RootStackParamList>>();
-                parent?.navigate("Filters");
+                parent?.navigate("Filters", { context: "feed" });
               }}
               hasActiveFilters={filtersActive}
               activeFilterCount={activeFilterCount}

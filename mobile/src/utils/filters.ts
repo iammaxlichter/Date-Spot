@@ -66,6 +66,18 @@ export function hasActiveSpotFilters(filters: SpotFilters): boolean {
   return getActiveSpotFilterCount(filters) > 0;
 }
 
+export function hasActiveSpotContentFilters(filters: SpotFilters): boolean {
+  return (
+    filters.selectedVibes.length > 0 ||
+    filters.selectedAtmospheres.length > 0 ||
+    filters.selectedDateScores.length > 0 ||
+    filters.selectedPriceBuckets.length > 0 ||
+    filters.selectedBestFors.length > 0 ||
+    filters.selectedWouldReturn.length > 0 ||
+    filters.selectedUserIds.length > 0
+  );
+}
+
 export function applySpotFilters<T extends SpotLike>(spots: T[], filters: SpotFilters): T[] {
   const filtered = spots.filter((spot) => {
     // OR within category, AND across categories.

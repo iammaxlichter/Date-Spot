@@ -1,6 +1,6 @@
 // src/screens/Map/MapScreen.tsx
 import React, { useRef, useEffect, useCallback } from "react";
-import { View, ActivityIndicator, Alert, Text, Keyboard } from "react-native";
+import { View, ActivityIndicator, Alert, Text, Keyboard, Modal, TouchableOpacity } from "react-native";
 import MapView, { Region } from "react-native-maps";
 
 import { useFocusEffect } from "@react-navigation/native";
@@ -19,6 +19,7 @@ import type { GooglePrediction } from "./types";
 import { TopOverlay } from "./components/TopOverlay";
 import { PinPlacementOverlay } from "./components/PinPlacementOverlay";
 import { SpotsMap } from "./components/SpotsMap";
+import { styles } from "./styles";
 
 import type { MapSpot } from "../../services/api/spots";
 import { getFollowedMapSpots } from "../../services/api/spots";
@@ -37,6 +38,7 @@ import {
   withPartnerTag,
   withoutPartnerTag,
 } from "../../features/tags/partnerTagging";
+import { findNearbySpot } from "../../utils/geo";
 
 export default function MapScreen({ navigation }: any) {
   const mapRef = useRef<MapView | null>(null);
@@ -52,6 +54,11 @@ export default function MapScreen({ navigation }: any) {
     longitude: number;
     name: string;
   } | null>(null);
+  const [nearbyDuplicate, setNearbyDuplicate] = React.useState<{
+    spot: MapSpot;
+    distance: number;
+  } | null>(null);
+  const [showNearbyDuplicateModal, setShowNearbyDuplicateModal] = React.useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -201,6 +208,48 @@ export default function MapScreen({ navigation }: any) {
     }
   };
 
+  const handleCancelCreateSpot = () => {
+    setShowNearbyDuplicateModal(false);
+    setNearbyDuplicate(null);
+    spotCreation.cancelNewSpot();
+  };
+
+  const proceedToSpotDetailsStep = () => {
+    setShowNearbyDuplicateModal(false);
+    setNearbyDuplicate(null);
+    spotCreation.goToDetails();
+  };
+
+  const handleNextFromPinPlacement = () => {
+    if (!spotCreation.newSpotCoords) {
+      spotCreation.goToDetails();
+      return;
+    }
+
+    const nearby = findNearbySpot(filteredSpots, spotCreation.newSpotCoords, 50);
+    if (!nearby) {
+      spotCreation.goToDetails();
+      return;
+    }
+
+    setNearbyDuplicate(nearby);
+    setShowNearbyDuplicateModal(true);
+  };
+
+  const handleAddReviewInstead = () => {
+    if (!nearbyDuplicate) {
+      setShowNearbyDuplicateModal(false);
+      return;
+    }
+
+    const selectedSpotId = nearbyDuplicate.spot.id;
+    setShowNearbyDuplicateModal(false);
+    setNearbyDuplicate(null);
+    spotCreation.cancelNewSpot();
+    Alert.alert("Coming soon", "Reviews aren’t available yet — coming soon.");
+    navigation.navigate("SpotDetails", { spotId: selectedSpotId });
+  };
+
   if (loading || !region) {
     return (
       <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
@@ -231,10 +280,10 @@ export default function MapScreen({ navigation }: any) {
           onOpenFilters={() => {
             const parentNav = navigation.getParent();
             if (parentNav) {
-              parentNav.navigate("Filters");
+              parentNav.navigate("Filters", { context: "map" });
               return;
             }
-            navigation.navigate("Filters");
+            navigation.navigate("Filters", { context: "map" });
           }}
           hasActiveFilters={hasActiveFilters}
           activeFilterCount={activeFilterCount}
@@ -244,9 +293,47 @@ export default function MapScreen({ navigation }: any) {
 
       <PinPlacementOverlay
         visible={spotCreation.isPlacingPin}
-        onCancel={spotCreation.cancelNewSpot}
-        onNext={spotCreation.goToDetails}
+        onCancel={handleCancelCreateSpot}
+        onNext={handleNextFromPinPlacement}
       />
+
+      <Modal
+        visible={showNearbyDuplicateModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowNearbyDuplicateModal(false)}
+      >
+        <View style={styles.nearbyDuplicateBackdrop}>
+          <View style={styles.nearbyDuplicateCard}>
+            <Text style={styles.nearbyDuplicateTitle}>Looks like there&apos;s already a DateSpot here</Text>
+            <Text style={styles.nearbyDuplicateBody}>
+              {`This pin is very close to an existing spot: ${
+                (nearbyDuplicate?.spot.name ?? "").trim() || "Unnamed spot"
+              }${
+                nearbyDuplicate ? ` (${Math.round(nearbyDuplicate.distance)}m away)` : ""
+              }.`}
+            </Text>
+
+            <TouchableOpacity style={styles.nearbyDuplicatePrimaryButton} onPress={handleAddReviewInstead}>
+              <Text style={styles.nearbyDuplicatePrimaryText}>Add a review instead</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.nearbyDuplicateSecondaryButton}
+              onPress={proceedToSpotDetailsStep}
+            >
+              <Text style={styles.nearbyDuplicateSecondaryText}>Create new spot anyway</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.nearbyDuplicateCancelButton}
+              onPress={() => setShowNearbyDuplicateModal(false)}
+            >
+              <Text style={styles.nearbyDuplicateCancelText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
 
       {permissionDenied && (
         <View style={{ padding: 8, backgroundColor: "#fee" }}>

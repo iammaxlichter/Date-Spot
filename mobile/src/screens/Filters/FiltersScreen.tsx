@@ -27,12 +27,18 @@ import { useSpotFiltersStore } from "../../stores/spotFiltersStore";
 
 type Props = NativeStackScreenProps<RootStackParamList, "Filters">;
 
-export default function FiltersScreen({ navigation }: Props) {
+export default function FiltersScreen({ navigation, route }: Props) {
   const filters = useSpotFiltersStore((state) => state.filters);
+  const showRelationshipUpdates = useSpotFiltersStore((state) => state.showRelationshipUpdates);
   const setFilters = useSpotFiltersStore((state) => state.setFilters);
+  const setShowRelationshipUpdates = useSpotFiltersStore((state) => state.setShowRelationshipUpdates);
   const resetFilters = useSpotFiltersStore((state) => state.resetFilters);
+  const isFeedContext = route.params?.context === "feed";
 
   const [draft, setDraft] = React.useState<SpotFilters>(filters);
+  const [draftShowRelationshipUpdates, setDraftShowRelationshipUpdates] = React.useState(
+    showRelationshipUpdates
+  );
   const [loadingPeople, setLoadingPeople] = React.useState(false);
   const [peopleSearch, setPeopleSearch] = React.useState("");
   const [availableVibes, setAvailableVibes] = React.useState<string[]>(VIBE_PRESETS);
@@ -43,7 +49,8 @@ export default function FiltersScreen({ navigation }: Props) {
   useFocusEffect(
     React.useCallback(() => {
       setDraft(filters);
-    }, [filters])
+      setDraftShowRelationshipUpdates(showRelationshipUpdates);
+    }, [filters, showRelationshipUpdates])
   );
 
   React.useEffect(() => {
@@ -111,10 +118,14 @@ export default function FiltersScreen({ navigation }: Props) {
   const onReset = () => {
     resetFilters();
     setDraft(DEFAULT_SPOT_FILTERS);
+    setDraftShowRelationshipUpdates(true);
   };
 
   const onApply = () => {
     setFilters(draft);
+    if (isFeedContext) {
+      setShowRelationshipUpdates(draftShowRelationshipUpdates);
+    }
     navigation.goBack();
   };
 
@@ -279,6 +290,17 @@ export default function FiltersScreen({ navigation }: Props) {
             />
           ))
         )}
+
+        {isFeedContext ? (
+          <>
+            <Text style={styles.sectionTitle}>Feed</Text>
+            <FilterCheckboxRow
+              label="Show Relationship Updates"
+              checked={draftShowRelationshipUpdates}
+              onPress={() => setDraftShowRelationshipUpdates((prev) => !prev)}
+            />
+          </>
+        ) : null}
       </ScrollView>
 
       <View style={styles.footer}>

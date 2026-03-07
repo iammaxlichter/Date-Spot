@@ -288,4 +288,66 @@ export const styles = StyleSheet.create({
     width: 36,
     height: 36,
   },
+
+  nearbyDuplicateBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.45)",
+    justifyContent: "center",
+    paddingHorizontal: 20,
+  },
+  nearbyDuplicateCard: {
+    backgroundColor: "#fff",
+    borderRadius: 16,
+    padding: 18,
+    borderWidth: 1,
+    borderColor: "#e8e8e8",
+  },
+  nearbyDuplicateTitle: {
+    fontSize: 18,
+    lineHeight: 24,
+    fontWeight: "800",
+    color: "#111",
+  },
+  nearbyDuplicateBody: {
+    marginTop: 10,
+    fontSize: 14,
+    lineHeight: 20,
+    color: "#333",
+  },
+  nearbyDuplicatePrimaryButton: {
+    marginTop: 16,
+    borderRadius: 10,
+    paddingVertical: 12,
+    alignItems: "center",
+    backgroundColor: "#111",
+  },
+  nearbyDuplicatePrimaryText: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#fff",
+  },
+  nearbyDuplicateSecondaryButton: {
+    marginTop: 10,
+    borderRadius: 10,
+    paddingVertical: 12,
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#d0d0d0",
+    backgroundColor: "#fff",
+  },
+  nearbyDuplicateSecondaryText: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#111",
+  },
+  nearbyDuplicateCancelButton: {
+    marginTop: 10,
+    alignItems: "center",
+    paddingVertical: 8,
+  },
+  nearbyDuplicateCancelText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#555",
+  },
 });

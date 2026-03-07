@@ -4,12 +4,15 @@ import { ScrollView, View, Text, Pressable } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { s } from "./styles";
 import { useSpotDetails } from "./hooks/useSpotDetails";
+import { useSpotReviews } from "./hooks/useSpotReviews";
 import { SpotDetailsLoading } from "./components/SpotDetailsLoading";
 import { SpotHeader } from "./components/SpotDetailsHeader";
 import { SpotDetailsPhotos } from "./components/SpotDetailsPhotos";
 import { SpotStats } from "./components/SpotDetailsStats";
 import { SpotTags } from "./components/SpotDetailsTags";
 import { SpotNotes } from "./components/SpotDetailsNotes";
+import { SpotReviews } from "./components/SpotReviews";
+import { AddReviewModal } from "./components/AddReviewModal";
 import { buildTagPresentation } from "../../features/tags/tagPresentation";
 
 export default function SpotDetailsScreen({ route }: any) {
@@ -17,6 +20,9 @@ export default function SpotDetailsScreen({ route }: any) {
   const spotId: string = route.params.spotId;
 
   const d = useSpotDetails({ spotId, navigation });
+  const reviews = useSpotReviews(spotId);
+  const [reviewModalOpen, setReviewModalOpen] = React.useState(false);
+  const [reviewModalExisting, setReviewModalExisting] = React.useState<import("../../services/api/spotReviews").SpotReview | null>(null);
 
   if (d.loading) return <SpotDetailsLoading />;
   if (!d.spot) return null;
@@ -24,9 +30,10 @@ export default function SpotDetailsScreen({ route }: any) {
   const presentation = buildTagPresentation(taggedUsers, d.activePartnerId);
 
   return (
+    <>
     <ScrollView style={s.screen} contentContainerStyle={{ padding: 14, paddingBottom: 24 }}>
       <View style={s.card}>
-        {/* ✅ top-right edit button (only for owner) */}
+        {/* top-right edit button (only for owner) */}
         {d.isOwner ? (
           <Pressable onPress={d.onEdit} hitSlop={10} style={s.editBtn}>
             <Text style={s.editBtnText}>Edit</Text>
@@ -85,6 +92,27 @@ export default function SpotDetailsScreen({ route }: any) {
           onToggle={() => d.setExpandedNotes((x) => !x)}
         />
       </View>
+
+      <SpotReviews
+        reviews={reviews.reviews}
+        currentUserId={reviews.currentUserId}
+        stats={reviews.stats}
+        loading={reviews.loading}
+        onAddReview={() => { setReviewModalExisting(null); setReviewModalOpen(true); }}
+        onEditMyReview={(review) => { setReviewModalExisting(review); setReviewModalOpen(true); }}
+      />
     </ScrollView>
+
+    <AddReviewModal
+      visible={reviewModalOpen}
+      spotId={spotId}
+      existingReview={reviewModalExisting}
+      onClose={() => setReviewModalOpen(false)}
+      onSaved={() => {
+        setReviewModalOpen(false);
+        void reviews.refresh();
+      }}
+    />
+    </>
   );
 }

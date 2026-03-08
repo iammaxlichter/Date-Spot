@@ -8,7 +8,7 @@ export const s = StyleSheet.create({
   backButton: {
     alignSelf: "flex-start",
     marginTop: 4,
-    marginBottom: 64,
+    marginBottom: 32,
   },
   content: {
     paddingHorizontal: 20,
@@ -169,3 +169,4 @@ export const s = StyleSheet.create({
     fontWeight: "700",
   },
 });
+

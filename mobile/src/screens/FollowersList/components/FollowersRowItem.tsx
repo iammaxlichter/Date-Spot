@@ -1,7 +1,6 @@
 // src/screens/FollowersList/components/FollowersRowItem.tsx
 import React from "react";
-import { View, Text, Image, Pressable } from "react-native";
-import { Alert } from "react-native";
+import { View, Text, Image, TouchableOpacity } from "react-native";
 
 import { Row } from "../types";
 import { styles } from "../styles";
@@ -22,60 +21,60 @@ export function FollowersRowItem({
   onRemoveFollower: (followerId: string) => void;
 }) {
   return (
-    <Pressable
-      onPress={() => onPressProfile(item.id)}
-      style={({ pressed }) => [styles.userItem, pressed && styles.userItemPressed]}
-    >
-      <View style={styles.userRow}>
-        <View style={styles.leftBlock}>
-          <Image
-            source={
-              item.avatar_url
-                ? { uri: item.avatar_url }
-                : require("../../../../assets/default-avatar.png")
-            }
-            style={styles.avatar}
-            resizeMode="cover"
-          />
-          <Text style={styles.username}>@{item.username ?? "unknown"}</Text>
-        </View>
+    <TouchableOpacity activeOpacity={0.8} onPress={() => onPressProfile(item.id)} style={styles.card}>
+      <Image
+        source={
+          item.avatar_url
+            ? { uri: item.avatar_url }
+            : require("../../../../assets/default-avatar.png")
+        }
+        style={styles.avatar}
+        resizeMode="cover"
+      />
 
-        {/* Right side actions */}
-        {item.id === currentUserId ? null : (
-          <View style={styles.rightActions}>
-            <Pressable
-              onPress={() => onToggleFollow(item.id)}
-              disabled={item.updating || item.removing}
+      <View style={styles.usernameWrap}>
+        <Text style={styles.username}>@{item.username ?? "unknown"}</Text>
+      </View>
+
+      {item.id === currentUserId ? null : (
+        <View style={styles.rightActions}>
+          <TouchableOpacity
+            onPress={(e) => {
+              e.stopPropagation?.();
+              onToggleFollow(item.id);
+            }}
+            disabled={item.updating || item.removing}
+            style={[
+              styles.followBtn,
+              item.isFollowing ? styles.followBtnFollowing : styles.followBtnNotFollowing,
+              { opacity: item.updating || item.removing ? 0.5 : 1 },
+            ]}
+          >
+            <Text
               style={[
-                styles.followBtn,
-                item.isFollowing ? styles.followingBtn : styles.followBtnPrimary,
-                (item.updating || item.removing) && { opacity: 0.6 },
+                styles.followBtnText,
+                item.isFollowing ? styles.followBtnTextFollowing : styles.followBtnTextNotFollowing,
               ]}
             >
-              <Text
-                style={[
-                  styles.followBtnText,
-                  item.isFollowing ? styles.followingBtnText : styles.followBtnTextPrimary,
-                ]}
-              >
-                {item.updating ? "..." : item.isFollowing ? "Following" : "Follow"}
-              </Text>
-            </Pressable>
+              {item.updating ? "..." : item.isFollowing ? "Following" : "Follow"}
+            </Text>
+          </TouchableOpacity>
 
-            {/* Only show remove button if viewing your own profile */}
-            {viewedUserId === currentUserId && (
-              <Pressable
-                onPress={() => onRemoveFollower(item.id)}
-                disabled={item.removing}
-                style={[styles.removeBtn, item.removing && { opacity: 0.6 }]}
-                hitSlop={10}
-              >
-                <Text style={styles.removeBtnText}>{item.removing ? "…" : "✕"}</Text>
-              </Pressable>
-            )}
-          </View>
-        )}
-      </View>
-    </Pressable>
+          {viewedUserId === currentUserId && (
+            <TouchableOpacity
+              onPress={(e) => {
+                e.stopPropagation?.();
+                onRemoveFollower(item.id);
+              }}
+              disabled={item.removing}
+              style={[styles.removeBtn, { opacity: item.removing ? 0.5 : 1 }]}
+              hitSlop={10}
+            >
+              <Text style={styles.removeBtnText}>{item.removing ? "..." : "X"}</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      )}
+    </TouchableOpacity>
   );
 }

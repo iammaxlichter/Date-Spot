@@ -12,7 +12,7 @@ export const s = StyleSheet.create({
   backButton: {
     alignSelf: "flex-start",
     marginTop: 4,
-    marginBottom: 64,
+    marginBottom: 32,
   },
   hero: {
     marginBottom: 20,
@@ -74,3 +74,4 @@ export const s = StyleSheet.create({
     color: "#C8C8C8",
   },
 });
+

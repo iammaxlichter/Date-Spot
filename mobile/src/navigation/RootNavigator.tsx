@@ -200,8 +200,7 @@ function NavigatorContent() {
                     name="Followers"
                     component={FollowersListScreen}
                     options={{
-                      title: "Followers",
-                      headerShadowVisible: false,
+                      headerShown: false,
                     }}
                   />
 

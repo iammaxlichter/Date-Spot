@@ -204,7 +204,7 @@ export default function MapScreen({ navigation }: any) {
   if (loading || !region) {
     return (
       <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-        <ActivityIndicator size="large" />
+        <ActivityIndicator size="large"  color="#E21E4D" />
         <Text>Loading map…</Text>
       </View>
     );

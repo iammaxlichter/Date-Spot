@@ -78,7 +78,7 @@ export function TagPeoplePicker(props: Props) {
 
           {loading ? (
             <View style={styles.tagPickerLoading}>
-              <ActivityIndicator size="small" />
+              <ActivityIndicator size="large"  color="#E21E4D" />
             </View>
           ) : (
             <FlatList

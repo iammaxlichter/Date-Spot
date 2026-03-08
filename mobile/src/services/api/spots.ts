@@ -264,10 +264,25 @@ export async function getFollowedDateSpots(
   limit = 25,
   filters?: SpotFilters
 ): Promise<FollowedDateSpot[]> {
-  const peopleSpotIds = await resolvePeopleFilteredSpotIds(filters?.selectedUserIds ?? []);
+  const [peopleSpotIds, userId] = await Promise.all([
+    resolvePeopleFilteredSpotIds(filters?.selectedUserIds ?? []),
+    requireUserId(),
+  ]);
+
   if (filters?.selectedUserIds?.length && peopleSpotIds && peopleSpotIds.length === 0) {
     return [];
   }
+
+  // Fetch follows with created_at so we can filter spots to only those posted after the follow
+  const { data: followsData } = await supabase
+    .from("follows")
+    .select("following_id,created_at")
+    .eq("follower_id", userId);
+
+  const followedAt = new Map<string, string>(
+    (followsData ?? []).map((r: any) => [r.following_id as string, r.created_at as string])
+  );
+  const allowedUserIds = [userId, ...Array.from(followedAt.keys())];
 
   let query = supabase
     .from("spots")
@@ -277,7 +292,8 @@ export async function getFollowedDateSpots(
       atmosphere,date_score,notes,vibe,price,best_for,would_return,
       profiles!inner(id,name,username,avatar_url)
     `
-    );
+    )
+    .in("user_id", allowedUserIds);
 
   if (peopleSpotIds && peopleSpotIds.length > 0) {
     query = query.in("id", peopleSpotIds);
@@ -295,7 +311,16 @@ export async function getFollowedDateSpots(
     }
   >;
 
-  return rows.map((row) => {
+  return rows
+    .filter((row) => {
+      // Always show your own spots
+      if (row.user_id === userId) return true;
+      // For followed users, only show spots posted after you followed them
+      const followedSince = followedAt.get(row.user_id);
+      if (!followedSince) return false;
+      return new Date(row.created_at) >= new Date(followedSince);
+    })
+    .map((row) => {
     const profile = normalizeJoinedProfile(row.profiles);
     return {
       spot: {

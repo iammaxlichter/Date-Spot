@@ -1,4 +1,3 @@
-// src/screens/Users/components/UsersSearchBar.tsx
 import React from "react";
 import { View, TextInput, ActivityIndicator } from "react-native";
 import { styles } from "../styles";
@@ -13,18 +12,20 @@ export function UsersSearchBar({
   loading: boolean;
 }) {
   return (
-    <View style={styles.header}>
+    <View style={styles.searchWrap}>
       <TextInput
         value={value}
         onChangeText={onChangeText}
         autoCapitalize="none"
-        placeholder="Search by username..."
+        placeholder="Search by name..."
+        placeholderTextColor="#9A9A9A"
         style={styles.searchInput}
+        autoCorrect={false}
       />
 
       {loading ? (
         <View style={styles.loadingWrap}>
-          <ActivityIndicator />
+          <ActivityIndicator size="large" color="#E21E4D"  />
         </View>
       ) : null}
     </View>

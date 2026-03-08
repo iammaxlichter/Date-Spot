@@ -32,6 +32,7 @@ import { BottomOverlay } from "./components/BottomOverlay";
 import { AppDrawerNavigator } from "./DrawerNavigator";
 import LaunchSplashScreen from "../screens/LaunchSplash/LaunchSplashScreen";
 import { supabase } from "../services/supabase/client";
+import { AppBackButton } from "../components/navigation/AppBackButton";
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -106,7 +107,15 @@ function NavigatorContent() {
       }}
     >
       <View style={{ flex: 1 }}>
-        <Stack.Navigator>
+        <Stack.Navigator
+          screenOptions={({ navigation }) => ({
+            headerBackVisible: false,
+            headerLeft: () =>
+              navigation.canGoBack() ? (
+                <AppBackButton onPress={() => navigation.goBack()} compact />
+              ) : null,
+          })}
+        >
           {session ? (
             <>
               {!profileSetupComplete ? (
@@ -154,9 +163,7 @@ function NavigatorContent() {
                     name="Settings"
                     component={SettingsScreen}
                     options={{
-                      title: "Settings",
-                      headerShadowVisible: false,
-                      headerBackTitle: "",
+                      headerShown: false,
                     }}
                   />
 
@@ -164,9 +171,7 @@ function NavigatorContent() {
                     name="EditProfile"
                     component={EditProfileScreen}
                     options={{
-                      title: "Edit Profile",
-                      headerShadowVisible: false,
-                      headerBackTitle: "",
+                      headerShown: false,
                     }}
                   />
 
@@ -182,20 +187,13 @@ function NavigatorContent() {
                   <Stack.Screen
                     name="Search"
                     component={SearchScreen}
-                    options={{
-                      title: "Search",
-                      headerShadowVisible: false,
-                    }}
+                    options={{ headerShown: false }}
                   />
 
                   <Stack.Screen
                     name="Filters"
                     component={FiltersScreen}
-                    options={{
-                      title: "Filters",
-                      headerShadowVisible: false,
-                      headerBackTitle: "",
-                    }}
+                    options={{ headerShown: false }}
                   />
 
                   <Stack.Screen
@@ -210,10 +208,7 @@ function NavigatorContent() {
                   <Stack.Screen
                     name="Following"
                     component={FollowingListScreen}
-                    options={{
-                      title: "Following",
-                      headerShadowVisible: false,
-                    }}
+                    options={{ headerShown: false }}
                   />
 
                   <Stack.Screen

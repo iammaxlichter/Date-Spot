@@ -382,7 +382,7 @@ export function NewSpotSheetScreen({
             >
               {isSaving ? (
                 <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                  <ActivityIndicator size="small" color="#fff" />
+                  <ActivityIndicator size="large" color="#E21E4D"  />
                   <Text style={styles.saveText}>Saving…</Text>
                 </View>
               ) : (

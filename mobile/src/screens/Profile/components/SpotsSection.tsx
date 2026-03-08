@@ -24,7 +24,7 @@ export function SpotsSection(props: {
 
       {spotsLoading ? (
         <View style={s.spotsLoadingContainer}>
-          <ActivityIndicator size="small" />
+          <ActivityIndicator size="large"  color="#E21E4D" />
           <Text style={s.spotsLoadingText}>Loading spots…</Text>
         </View>
       ) : spots.length > 0 ? (

@@ -19,6 +19,7 @@ import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../../navigation/types";
 import { supabase } from "../../services/supabase/client";
 import { uploadProfilePicture } from "../../services/supabase/uploadProfilePicture";
+import { AppBackButton } from "../../components/navigation/AppBackButton";
 import { s } from "./styles";
 
 type Props = NativeStackScreenProps<RootStackParamList, "EditProfile">;
@@ -363,7 +364,7 @@ export default function EditProfileScreen({ navigation }: Props) {
   if (loading) {
     return (
       <View style={[s.container, { justifyContent: "center", alignItems: "center" }]}>
-        <ActivityIndicator size="large" />
+        <ActivityIndicator size="large" color="#E21E4D"  />
       </View>
     );
   }
@@ -373,100 +374,136 @@ export default function EditProfileScreen({ navigation }: Props) {
       style={s.container}
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
-      <ScrollView contentContainerStyle={s.content} keyboardShouldPersistTaps="handled">
-        {banner ? (
-          <View style={[s.banner, banner.type === "error" ? s.bannerError : s.bannerSuccess]}>
-            <Text style={s.bannerText}>{banner.text}</Text>
+      <ScrollView
+        contentContainerStyle={[s.content, { paddingTop: insets.top + 28 }]}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
+      >
+          <View style={s.backButton}>
+            <AppBackButton onPress={() => navigation.goBack()} disabled={saving} />
           </View>
-        ) : null}
 
-        <View style={s.avatarWrap}>
-          <Pressable style={s.avatarPressable} onPress={onPickAvatar} disabled={saving || pickingAvatar}>
-            <Image source={avatarSource} style={s.avatar} />
+          <View style={s.hero}>
+            <Text style={s.eyebrow}>Profile</Text>
+            <Text style={s.title}>Edit your profile</Text>
+            <Text style={s.subtitle}>Update your account details and keep your info current.</Text>
+          </View>
+
+          {banner ? (
+            <View style={[s.banner, banner.type === "error" ? s.bannerError : s.bannerSuccess]}>
+              <Text style={s.bannerText}>{banner.text}</Text>
+            </View>
+          ) : null}
+
+          <View style={s.card}>
+            <Text style={s.cardTitle}>Profile photo</Text>
+            <Text style={s.cardSubtitle}>Choose a clear photo so people can recognize you.</Text>
+            <View style={s.avatarWrap}>
+              <Pressable
+                style={s.avatarPressable}
+                onPress={onPickAvatar}
+                disabled={saving || pickingAvatar}
+              >
+                <Image source={avatarSource} style={s.avatar} />
+              </Pressable>
+              <Text style={s.avatarHint}>
+                {pickingAvatar ? "Selecting image..." : "Tap profile picture to change"}
+              </Text>
+            </View>
+          </View>
+
+          <View style={s.card}>
+            <Text style={s.cardTitle}>Account details</Text>
+            <Text style={s.cardSubtitle}>This is the info shown on your profile.</Text>
+
+            <View style={s.field}>
+              <Text style={s.label}>Name</Text>
+              <TextInput
+                style={[s.input, errors.name ? s.inputError : null]}
+                value={name}
+                onChangeText={setName}
+                placeholder="Your name"
+                placeholderTextColor="#8F8F8F"
+                autoCapitalize="words"
+                autoCorrect={false}
+                maxLength={40}
+              />
+              {errors.name ? <Text style={s.errorText}>{errors.name}</Text> : null}
+            </View>
+
+            <View style={s.field}>
+              <Text style={s.label}>Username</Text>
+              <TextInput
+                style={[s.input, s.inputReadOnly]}
+                value={username}
+                editable={false}
+                autoCapitalize="none"
+                autoCorrect={false}
+              />
+              <Text style={s.helperText}>Username cannot be changed.</Text>
+            </View>
+
+            <View style={s.field}>
+              <Text style={s.label}>Email</Text>
+              <TextInput
+                style={[s.input, errors.email ? s.inputError : null]}
+                value={email}
+                onChangeText={setEmail}
+                placeholder="name@email.com"
+                placeholderTextColor="#8F8F8F"
+                keyboardType="email-address"
+                autoCapitalize="none"
+                autoCorrect={false}
+              />
+              {errors.email ? <Text style={s.errorText}>{errors.email}</Text> : null}
+            </View>
+          </View>
+
+          <View style={s.card}>
+            <Text style={s.cardTitle}>Security</Text>
+            <Text style={s.cardSubtitle}>Leave password fields blank to keep it unchanged.</Text>
+
+            <View style={s.field}>
+              <Text style={s.label}>New Password</Text>
+              <TextInput
+                style={[s.input, errors.password ? s.inputError : null]}
+                value={password}
+                onChangeText={setPassword}
+                placeholder="Leave blank to keep current password"
+                placeholderTextColor="#8F8F8F"
+                secureTextEntry
+                autoCapitalize="none"
+                autoCorrect={false}
+              />
+              {errors.password ? <Text style={s.errorText}>{errors.password}</Text> : null}
+            </View>
+
+            <View style={s.field}>
+              <Text style={s.label}>Confirm Password</Text>
+              <TextInput
+                style={[s.input, errors.confirmPassword ? s.inputError : null]}
+                value={confirmPassword}
+                onChangeText={setConfirmPassword}
+                placeholder="Re-enter new password"
+                placeholderTextColor="#8F8F8F"
+                secureTextEntry
+                autoCapitalize="none"
+                autoCorrect={false}
+              />
+              {errors.confirmPassword ? <Text style={s.errorText}>{errors.confirmPassword}</Text> : null}
+            </View>
+          </View>
+        </ScrollView>
+
+        <View style={[s.footer, { paddingBottom: Math.max(10, insets.bottom) }]}>
+          <Pressable
+            style={[s.saveButton, disableSave ? s.saveButtonDisabled : null]}
+            onPress={onSave}
+            disabled={disableSave}
+          >
+            <Text style={s.saveButtonText}>{saving ? "Saving..." : "Save Changes"}</Text>
           </Pressable>
-          <Text style={s.avatarHint}>
-            {pickingAvatar ? "Selecting image..." : "Tap profile picture to change"}
-          </Text>
         </View>
-
-        <View style={s.field}>
-          <Text style={s.label}>Name</Text>
-          <TextInput
-            style={[s.input, errors.name ? s.inputError : null]}
-            value={name}
-            onChangeText={setName}
-            placeholder="Your name"
-            autoCapitalize="words"
-            autoCorrect={false}
-            maxLength={40}
-          />
-          {errors.name ? <Text style={s.errorText}>{errors.name}</Text> : null}
-        </View>
-
-        <View style={s.field}>
-          <Text style={s.label}>Username</Text>
-          <TextInput
-            style={[s.input, s.inputReadOnly]}
-            value={username}
-            editable={false}
-            autoCapitalize="none"
-            autoCorrect={false}
-          />
-          <Text style={s.helperText}>Username cannot be changed.</Text>
-        </View>
-
-        <View style={s.field}>
-          <Text style={s.label}>Email</Text>
-          <TextInput
-            style={[s.input, errors.email ? s.inputError : null]}
-            value={email}
-            onChangeText={setEmail}
-            placeholder="name@email.com"
-            keyboardType="email-address"
-            autoCapitalize="none"
-            autoCorrect={false}
-          />
-          {errors.email ? <Text style={s.errorText}>{errors.email}</Text> : null}
-        </View>
-
-        <View style={s.field}>
-          <Text style={s.label}>New Password</Text>
-          <TextInput
-            style={[s.input, errors.password ? s.inputError : null]}
-            value={password}
-            onChangeText={setPassword}
-            placeholder="Leave blank to keep current password"
-            secureTextEntry
-            autoCapitalize="none"
-            autoCorrect={false}
-          />
-          {errors.password ? <Text style={s.errorText}>{errors.password}</Text> : null}
-        </View>
-
-        <View style={s.field}>
-          <Text style={s.label}>Confirm Password</Text>
-          <TextInput
-            style={[s.input, errors.confirmPassword ? s.inputError : null]}
-            value={confirmPassword}
-            onChangeText={setConfirmPassword}
-            placeholder="Re-enter new password"
-            secureTextEntry
-            autoCapitalize="none"
-            autoCorrect={false}
-          />
-          {errors.confirmPassword ? <Text style={s.errorText}>{errors.confirmPassword}</Text> : null}
-        </View>
-      </ScrollView>
-
-      <View style={[s.footer, { paddingBottom: Math.max(10, insets.bottom) }]}>
-        <Pressable
-          style={[s.saveButton, disableSave ? s.saveButtonDisabled : null]}
-          onPress={onSave}
-          disabled={disableSave}
-        >
-          <Text style={s.saveButtonText}>{saving ? "Saving..." : "Save"}</Text>
-        </Pressable>
-      </View>
     </KeyboardAvoidingView>
   );
 }

@@ -6,7 +6,7 @@ import { s } from "../styles";
 export function SpotDetailsLoading() {
   return (
     <View style={[s.screen, { justifyContent: "center", alignItems: "center" }]}>
-      <ActivityIndicator size="large" />
+      <ActivityIndicator size="large"  color="#E21E4D" />
       <Text style={{ marginTop: 10 }}>Loading DateSpot…</Text>
     </View>
   );

@@ -64,15 +64,15 @@ export function useUsersSearch({ navigation }: { navigation: any }) {
 
         const { data, error } = await supabase
           .from("profiles")
-          .select("id,username,avatar_url")
-          .ilike("username", `%${cleaned}%`)
-          .order("username", { ascending: true })
+          .select("id,name,username,avatar_url")
+          .ilike("name", `%${cleaned}%`)
+          .order("name", { ascending: true })
           .limit(25);
 
         if (error) throw error;
 
         const filtered = (data ?? [])
-          .filter((r: any) => r.username)
+          .filter((r: any) => r.name)
           .filter((r: any) => (myId ? r.id !== myId : true)) as UserRow[];
 
         setResults(filtered);
@@ -89,7 +89,7 @@ export function useUsersSearch({ navigation }: { navigation: any }) {
   );
 
   const onChange = (text: string) => {
-    const sanitized = text.replace(/[^a-zA-Z0-9_]/g, "");
+    const sanitized = text.replace(/[^a-zA-Z0-9_ ]/g, "");
     setQ(sanitized);
 
     if (debounceRef.current) clearTimeout(debounceRef.current);

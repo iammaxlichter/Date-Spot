@@ -11,7 +11,7 @@ export function EditSpotLoading() {
         { justifyContent: "center", alignItems: "center" },
       ]}
     >
-      <ActivityIndicator size="large" />
+      <ActivityIndicator size="large"  color="#E21E4D" />
       <Text style={{ marginTop: 10 }}>Loading…</Text>
     </View>
   );

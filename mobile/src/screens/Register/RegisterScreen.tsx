@@ -13,11 +13,14 @@ export default function RegisterScreen({ navigation }: any) {
       username={register.username}
       password={register.password}
       loading={register.loading}
+      googleLoading={register.googleLoading}
+      passwordError={register.passwordError}
       onChangeEmail={register.setEmail}
       onChangeName={register.setName}
       onChangeUsername={register.setUsername}
       onChangePassword={register.setPassword}
       onRegister={register.onRegister}
+      onGoogleRegister={register.onGoogleRegister}
       onGoLogin={() => navigation.navigate("Login")}
     />
   );

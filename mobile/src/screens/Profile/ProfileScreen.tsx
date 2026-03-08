@@ -244,7 +244,7 @@ export default function ProfileScreen() {
   if (loading || !profile) {
     return (
       <View style={[s.container, { justifyContent: "center" }]}>
-        <ActivityIndicator size="large" />
+        <ActivityIndicator size="large"  color="#E21E4D" />
       </View>
     );
   }
@@ -252,7 +252,16 @@ export default function ProfileScreen() {
   return (
     <ScrollView
       contentContainerStyle={s.container}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+      refreshControl={
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={onRefresh}
+          tintColor="#E21E4D"
+          titleColor="#E21E4D"
+          colors={["#E21E4D"]}
+          progressBackgroundColor="#FFFFFF"
+        />
+      }
     >
       <AvatarSection
         uploading={false}

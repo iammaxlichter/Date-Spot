@@ -31,7 +31,7 @@ export default function FollowersListScreen({ route }: any) {
   if (loading && rows.length === 0 && !error) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" />
+        <ActivityIndicator size="large"  color="#E21E4D" />
       </View>
     );
   }
@@ -46,7 +46,16 @@ export default function FollowersListScreen({ route }: any) {
         data={rows}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.listContent}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor="#E21E4D"
+            titleColor="#E21E4D"
+            colors={["#E21E4D"]}
+            progressBackgroundColor="#FFFFFF"
+          />
+        }
         onEndReached={handleLoadMore}
         onEndReachedThreshold={0.5}
         ListEmptyComponent={
@@ -57,7 +66,7 @@ export default function FollowersListScreen({ route }: any) {
         ListFooterComponent={
           loading && rows.length > 0 ? (
             <View style={styles.footerLoader}>
-              <ActivityIndicator />
+              <ActivityIndicator size="large"  color="#E21E4D" />
             </View>
           ) : null
         }

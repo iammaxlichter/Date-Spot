@@ -7,7 +7,7 @@ export function EditSpotSavingOverlay(props: { visible: boolean }) {
 
   return (
     <View style={{ padding: 16, alignItems: "center" }}>
-      <ActivityIndicator size="large" />
+      <ActivityIndicator size="large"  color="#E21E4D" />
       <Text style={{ marginTop: 10 }}>Saving…</Text>
     </View>
   );

@@ -22,7 +22,7 @@ export function AvatarSection(props: {
         <Image source={avatarSource} style={s.avatar} />
         {uploading && (
           <View style={s.avatarOverlay}>
-            <ActivityIndicator />
+            <ActivityIndicator size="large"  color="#E21E4D" />
           </View>
         )}
       </Pressable>

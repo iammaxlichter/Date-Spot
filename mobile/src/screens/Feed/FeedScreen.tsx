@@ -412,7 +412,7 @@ export default function FeedScreen() {
   if (isLoading) {
     return (
       <View style={[s.screen, { justifyContent: "center", alignItems: "center" }]}>
-        <ActivityIndicator size="large" />
+        <ActivityIndicator size="large"  color="#E21E4D" />
         <Text style={{ marginTop: 10, textAlign: "center" }}>Loading feed…</Text>
       </View>
     );
@@ -444,7 +444,16 @@ export default function FeedScreen() {
         keyExtractor={(x) => (x.kind === "spot" ? `spot:${x.spot.id}` : `event:${x.event.id}`)}
         renderItem={renderItem}
         contentContainerStyle={{ padding: 14, paddingBottom: 110 }}
-        refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={onRefresh} />}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefetching}
+            onRefresh={onRefresh}
+            tintColor="#E21E4D"
+            titleColor="#E21E4D"
+            colors={["#E21E4D"]}
+            progressBackgroundColor="#FFFFFF"
+          />
+        }
         ListEmptyComponent={
           <View style={s.empty}>
             <Text style={s.emptyTitle}>No spots yet</Text>

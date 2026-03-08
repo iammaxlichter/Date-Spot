@@ -1,4 +1,3 @@
-// src/screens/Users/components/UserRowItem.tsx
 import React from "react";
 import { View, Text, Image, TouchableOpacity } from "react-native";
 import { styles } from "../styles";
@@ -19,9 +18,9 @@ export function UserRowItem({
 }) {
   return (
     <TouchableOpacity
-      activeOpacity={0.85}
+      activeOpacity={0.8}
       onPress={onPressRow}
-      style={styles.row}
+      style={styles.card}
     >
       <Image
         source={
@@ -33,7 +32,10 @@ export function UserRowItem({
       />
 
       <View style={styles.usernameWrap}>
-        <Text style={styles.username}>@{item.username}</Text>
+        <Text style={styles.name}>{item.name}</Text>
+        {item.username ? (
+          <Text style={styles.username}>@{item.username}</Text>
+        ) : null}
       </View>
 
       <TouchableOpacity
@@ -45,13 +47,15 @@ export function UserRowItem({
         style={[
           styles.followBtn,
           isFollowing ? styles.followBtnFollowing : styles.followBtnNotFollowing,
-          { opacity: isBusy ? 0.6 : 1 },
+          { opacity: isBusy ? 0.5 : 1 },
         ]}
       >
         <Text
           style={[
             styles.followBtnText,
-            isFollowing ? styles.followBtnTextFollowing : styles.followBtnTextNotFollowing,
+            isFollowing
+              ? styles.followBtnTextFollowing
+              : styles.followBtnTextNotFollowing,
           ]}
         >
           {isFollowing ? "Following" : "Follow"}

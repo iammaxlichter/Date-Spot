@@ -10,7 +10,7 @@ type Props = {
 
 export function FilterCheckboxRow({ label, checked, onPress, avatarUrl }: Props) {
   return (
-    <TouchableOpacity style={styles.row} onPress={onPress}>
+    <TouchableOpacity style={styles.row} onPress={onPress} activeOpacity={0.7}>
       <View style={styles.left}>
         {avatarUrl !== undefined ? (
           <Image
@@ -28,7 +28,7 @@ export function FilterCheckboxRow({ label, checked, onPress, avatarUrl }: Props)
       </View>
 
       <View style={[styles.checkbox, checked && styles.checkboxChecked]}>
-        {checked ? <Text style={styles.checkmark}>X</Text> : null}
+        {checked ? <Text style={styles.checkmark}>✓</Text> : null}
       </View>
     </TouchableOpacity>
   );
@@ -39,9 +39,9 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingVertical: 10,
+    paddingVertical: 13,
     borderBottomWidth: 1,
-    borderBottomColor: "#efefef",
+    borderBottomColor: "#F2F2F2",
   },
   left: {
     flexDirection: "row",
@@ -50,34 +50,36 @@ const styles = StyleSheet.create({
     marginRight: 12,
   },
   avatar: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     marginRight: 10,
-    backgroundColor: "#eee",
+    borderWidth: 1,
+    borderColor: "#E5E5E5",
   },
   label: {
-    fontSize: 14,
-    color: "#222",
+    fontSize: 15,
+    fontWeight: "500",
+    color: "#1D1D1D",
     flex: 1,
   },
   checkbox: {
     width: 22,
     height: 22,
     borderRadius: 6,
-    borderWidth: 1,
-    borderColor: "#b7b7b7",
+    borderWidth: 1.5,
+    borderColor: "#D5D5D5",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#fff",
+    backgroundColor: "#FFFFFF",
   },
   checkboxChecked: {
-    borderColor: "#111",
-    backgroundColor: "#111",
+    borderColor: "#E21E4D",
+    backgroundColor: "#E21E4D",
   },
   checkmark: {
-    color: "#fff",
-    fontSize: 13,
+    color: "#FFFFFF",
+    fontSize: 12,
     fontWeight: "800",
     lineHeight: 14,
   },

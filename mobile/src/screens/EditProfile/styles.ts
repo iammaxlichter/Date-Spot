@@ -16,7 +16,7 @@ export const s = StyleSheet.create({
     paddingBottom: 128,
   },
   hero: {
-    marginBottom: 18,
+    marginBottom: 20,
   },
   eyebrow: {
     color: "#D91B46",

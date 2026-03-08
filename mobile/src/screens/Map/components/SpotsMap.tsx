@@ -339,11 +339,11 @@ export function SpotsMap(props: {
             tracksViewChanges={false}
           >
             <View style={s.savingShell}>
-              <ActivityIndicator size="small" color="#fff" />
+              <ActivityIndicator size="large" color="#E21E4D"  />
             </View>
             <Callout tooltip>
               <View style={s.savingCallout}>
-                <ActivityIndicator size="small" color="#007bff" style={{ marginRight: 6 }} />
+                <ActivityIndicator size="large" color="#E21E4D" style={{ marginRight: 6 }}  />
                 <Text style={s.savingCalloutText}>Saving "{savingPin.name}"…</Text>
               </View>
             </Callout>

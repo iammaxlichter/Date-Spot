@@ -122,7 +122,7 @@ export function PendingPartnerBanner({ me, partnership, onResolved, onAnyAccepte
         <Text style={s.body}>@{requesterUsername} wants to be your DateSpot partner.</Text>
       ) : (
         <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-          <ActivityIndicator />
+          <ActivityIndicator size="large"  color="#E21E4D" />
           <Text style={s.body}>
             {state === "accepting" ? "Accepting..." : state === "declining" ? "Declining..." : "Updating..."}
           </Text>

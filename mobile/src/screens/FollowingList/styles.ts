@@ -4,116 +4,176 @@ import { StyleSheet } from "react-native";
 export const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "white",
+    backgroundColor: "#FFFFFF",
   },
   loadingContainer: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
+    backgroundColor: "#FFFFFF",
   },
-  searchContainer: {
-    padding: 12,
-    backgroundColor: "#fff",
+
+  // Header
+  header: {
+    paddingHorizontal: 20,
+    paddingBottom: 8,
+  },
+  searchSpinner: {
+    marginBottom: 12,
+  },
+  backButton: {
+    alignSelf: "flex-start",
+    marginTop: 4,
+    marginBottom: 64,
+  },
+  hero: {
+    marginBottom: 20,
+  },
+  eyebrow: {
+    color: "#D91B46",
+    fontSize: 12,
+    fontWeight: "700",
+    letterSpacing: 0.6,
+    textTransform: "uppercase",
+    marginBottom: 6,
+  },
+  title: {
+    fontSize: 31,
+    lineHeight: 35,
+    fontWeight: "800",
+    color: "#1D1D1D",
+    marginBottom: 8,
+  },
+  subtitle: {
+    fontSize: 14,
+    lineHeight: 20,
+    color: "#616161",
+  },
+
+  // Search bar
+  searchInputWrap: {
+    position: "relative",
   },
   searchInput: {
-    height: 40,
+    minHeight: 50,
     borderWidth: 1,
-    borderColor: "#ddd",
-    borderRadius: 8,
-    paddingHorizontal: 12,
+    borderColor: "#E7E7E7",
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingRight: 44,
+    paddingVertical: 12,
     fontSize: 15,
-    backgroundColor: "#fff",
+    color: "#191919",
+    backgroundColor: "#FFFFFF",
+    marginBottom: 16,
   },
+  searchClearBtn: {
+    position: "absolute",
+    right: 12,
+    top: 12,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#E21E4D",
+  },
+  searchClearBtnText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#FFFFFF",
+    lineHeight: 14,
+  },
+
+  // Error banner
   errorContainer: {
-    padding: 16,
-    backgroundColor: "#fee",
+    marginHorizontal: 20,
+    marginBottom: 12,
+    backgroundColor: "#FFF0F3",
+    borderWidth: 1,
+    borderColor: "#FCCDD7",
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
   },
   errorText: {
-    color: "#c33",
+    color: "#C0183D",
+    fontSize: 13,
+    fontWeight: "500",
     textAlign: "center",
   },
+
+  // List
   listContent: {
-    paddingTop: 8,
+    paddingHorizontal: 20,
     paddingBottom: 120,
   },
   emptyText: {
-    padding: 16,
-    color: "#666",
+    color: "#9A9A9A",
+    fontSize: 14,
     textAlign: "center",
+    marginTop: 32,
   },
   footerLoader: {
     paddingVertical: 16,
-  },
-  userItem: {
-    flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: "#fff",
-    borderBottomWidth: 1,
-    borderBottomColor: "#eee",
-    minHeight: 72,
-  },
-  userItemPressed: {
-    backgroundColor: "#f5f5f5",
   },
 
+  // Row card (matches UserRowItem from UsersSearch)
+  card: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#EFEFEF",
+    borderRadius: 16,
+    backgroundColor: "#FFFFFF",
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    marginBottom: 10,
+    shadowColor: "#000",
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 2,
+  },
   avatar: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
+    width: 46,
+    height: 46,
+    borderRadius: 23,
     marginRight: 12,
+    borderWidth: 1.5,
+    borderColor: "#E5E5E5",
   },
-
-  userRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    width: "100%",
-    justifyContent: "space-between",
-    paddingHorizontal: 16,
-    marginBottom: 16,
+  usernameWrap: {
+    flex: 1,
   },
-
-  leftBlock: {
-    flexDirection: "row",
-    alignItems: "center",
-    flexShrink: 1,
-  },
-
   username: {
-    fontWeight: "600",
-    fontSize: 16,
-    color: "#000",
-    marginLeft: 12,
+    fontSize: 15,
+    fontWeight: "700",
+    color: "#1D1D1D",
   },
-
   followBtn: {
-    paddingHorizontal: 14,
+    paddingHorizontal: 16,
     paddingVertical: 8,
-    borderRadius: 10,
+    borderRadius: 999,
     borderWidth: 1,
   },
-
-  followBtnPrimary: {
-    backgroundColor: "#111",
-    borderColor: "#111",
+  followBtnFollowing: {
+    borderColor: "#D5D5D5",
+    backgroundColor: "#FFFFFF",
   },
-
-  followingBtn: {
-    backgroundColor: "#fff",
-    borderColor: "#ddd",
+  followBtnNotFollowing: {
+    borderColor: "#E21E4D",
+    backgroundColor: "#E21E4D",
   },
-
   followBtnText: {
-    fontWeight: "700",
     fontSize: 13,
+    fontWeight: "700",
   },
-
-  followBtnTextPrimary: {
-    color: "#fff",
+  followBtnTextFollowing: {
+    color: "#4A4A4A",
   },
-
-  followingBtnText: {
-    color: "#111",
+  followBtnTextNotFollowing: {
+    color: "#FFFFFF",
   },
 });

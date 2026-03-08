@@ -187,20 +187,13 @@ function NavigatorContent() {
                   <Stack.Screen
                     name="Search"
                     component={SearchScreen}
-                    options={{
-                      title: "Search",
-                      headerShadowVisible: false,
-                    }}
+                    options={{ headerShown: false }}
                   />
 
                   <Stack.Screen
                     name="Filters"
                     component={FiltersScreen}
-                    options={{
-                      title: "Filters",
-                      headerShadowVisible: false,
-                      headerBackTitle: "",
-                    }}
+                    options={{ headerShown: false }}
                   />
 
                   <Stack.Screen
@@ -215,10 +208,7 @@ function NavigatorContent() {
                   <Stack.Screen
                     name="Following"
                     component={FollowingListScreen}
-                    options={{
-                      title: "Following",
-                      headerShadowVisible: false,
-                    }}
+                    options={{ headerShown: false }}
                   />
 
                   <Stack.Screen

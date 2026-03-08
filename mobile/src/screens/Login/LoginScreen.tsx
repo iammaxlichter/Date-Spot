@@ -11,9 +11,11 @@ export default function LoginScreen({ navigation }: any) {
       email={login.email}
       password={login.password}
       loading={login.loading}
+      googleLoading={login.googleLoading}
       onChangeEmail={login.setEmail}
       onChangePassword={login.setPassword}
       onLogin={login.onLogin}
+      onGoogleLogin={login.onGoogleLogin}
       onGoRegister={() => navigation.navigate("Register")}
     />
   );

@@ -9,6 +9,7 @@ export type SearchTabParamList = {
 export type RootStackParamList = {
   Register: undefined;
   Login: undefined;
+  ProfileSetup: undefined;
   Home: undefined;
   Profile: undefined;
   Settings: undefined;

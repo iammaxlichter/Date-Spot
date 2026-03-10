@@ -84,7 +84,7 @@ export function PendingPartnerBanner({ me, partnership, onResolved, onAnyAccepte
         // Check if I already have a partner before accepting
         const myExisting = await getAcceptedPartnershipForUser(me);
         if (myExisting && myExisting.id !== partnership.id) {
-          throw new Error("You already have a DateSpot partner.");
+          throw new Error("You already have a Date Spot partner.");
         }
 
         await acceptRequest(partnership.id);
@@ -119,7 +119,7 @@ export function PendingPartnerBanner({ me, partnership, onResolved, onAnyAccepte
       <Text style={s.title}>Date partner request</Text>
 
       {state === "idle" ? (
-        <Text style={s.body}>@{requesterUsername} wants to be your DateSpot partner.</Text>
+        <Text style={s.body}>@{requesterUsername} wants to be your Date Spot partner.</Text>
       ) : (
         <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
           <ActivityIndicator size="large"  color="#E21E4D" />

@@ -97,55 +97,76 @@ export const navStyles = StyleSheet.create({
   },
 
   drawerContent: {
-    paddingTop: 6,
-    paddingHorizontal: 10,
+    paddingHorizontal: 28,
+    paddingBottom: 32,
   },
 
   drawerHeaderRow: {
     flexDirection: "row",
-    alignItems: "center",
+    alignItems: "flex-start",
     justifyContent: "space-between",
-    paddingHorizontal: 8,
-    paddingVertical: 8,
-    marginBottom: 8,
+    marginBottom: 20,
+    paddingLeft: 12,
+  },
+
+  drawerEyebrow: {
+    color: "#E21E4D",
+    fontSize: 11,
+    fontWeight: "700",
+    letterSpacing: 0.8,
+    marginBottom: 4,
   },
 
   drawerHeaderTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: "#111",
+    fontSize: 28,
+    fontWeight: "800",
+    color: "#1D1D1D",
+    letterSpacing: -0.3,
   },
 
   drawerCloseButton: {
-    paddingHorizontal: 8,
-    paddingVertical: 6,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "#F2D9E0",
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 4,
   },
 
   drawerCloseIcon: {
-    fontSize: 18,
+    fontSize: 14,
     fontWeight: "700",
-    color: "#111",
+    color: "#D91B46",
+  },
+
+  drawerDivider: {
+    height: 1,
+    backgroundColor: "#EFEFEF",
+    marginBottom: 8,
   },
 
   drawerItem: {
-    borderRadius: 10,
-    paddingVertical: 12,
-    paddingHorizontal: 10,
+    borderRadius: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 12,
     marginVertical: 2,
   },
 
   drawerItemActive: {
-    backgroundColor: "#f2f2f2",
+    backgroundColor: "#FFF5F7",
   },
 
   drawerItemText: {
     fontSize: 17,
-    fontWeight: "500",
-    color: "#222",
+    fontWeight: "600",
+    color: "#1D1D1D",
   },
 
   drawerItemTextActive: {
+    color: "#E21E4D",
     fontWeight: "700",
-    color: "#111",
   },
 });

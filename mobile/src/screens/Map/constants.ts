@@ -29,13 +29,13 @@ export const DEFAULT_AUTOCOMPLETE_RADIUS = 20000;
 export const DEFAULT_INITIAL_REGION = {
   latitude: 32.977,
   longitude: -96.735,
-  latitudeDelta: 0.05,
-  longitudeDelta: 0.05,
+  latitudeDelta: 0.02,
+  longitudeDelta: 0.02,
 };
 
 export const ZOOM_TO_SAVED_SPOT = {
-  latitudeDelta: 0.02,
-  longitudeDelta: 0.02,
+  latitudeDelta: 0.008,
+  longitudeDelta: 0.008,
 };
 
 export const ZOOM_TO_GOOGLE_PLACE = {

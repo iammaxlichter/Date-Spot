@@ -8,7 +8,7 @@ export const s = StyleSheet.create({
     paddingBottom: 120,
     backgroundColor: "white",
   },
-  avatar: { width: 120, height: 120, borderRadius: 60, marginBottom: 14 },
+  avatar: { width: 120, height: 120, borderRadius: 60, marginBottom: 14, backgroundColor: "#EFEFEF", overflow: "hidden" },
   name: { fontSize: 22, fontWeight: "700", marginBottom: 12 },
   username: { fontSize: 14, color: "#666", marginBottom: 10 },
 

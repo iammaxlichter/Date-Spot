@@ -3,7 +3,6 @@ import {
   View,
   ActivityIndicator,
   Alert,
-  ImageSourcePropType,
   ScrollView,
   RefreshControl,
 } from "react-native";
@@ -283,7 +282,7 @@ export default function UserProfileScreen({ route }: any) {
 
       const meU = await getUsername(currentUserId);
       const themU = await getUsername(userId);
-      const msg = `@${meU} removed @${themU} as their DateSpot partner.`;
+      const msg = `@${meU} removed @${themU} as their Date Spot partner.`;
 
       await insertEventForBoth(cancelledRow.user_a, cancelledRow.user_b, cancelledRow.id, msg);
 
@@ -307,10 +306,6 @@ export default function UserProfileScreen({ route }: any) {
     );
   }
 
-  const avatarSource: ImageSourcePropType = profile.avatar_url
-    ? { uri: profile.avatar_url }
-    : require("../../../assets/default-avatar.png");
-
   return (
     <>
       <ScrollView
@@ -327,7 +322,7 @@ export default function UserProfileScreen({ route }: any) {
         }
       >
         <ProfileHeader
-          avatarSource={avatarSource}
+          avatarUri={profile.avatar_url}
           username={profile.username}
           name={profile.name}
         />

@@ -15,7 +15,7 @@ export function PartnerCard(props: {
     <View style={{ width: "100%", paddingHorizontal: 24, marginTop: 24 }}>
       <View style={s.partnerCard}>
         <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-          <Text style={s.partnerTitle}>DateSpot partner</Text>
+          <Text style={s.partnerTitle}>Date Spot partner</Text>
           <Pressable onPress={onOpenMenu} hitSlop={10}>
             <Text style={s.partnerDots}>⋯</Text>
           </Pressable>
@@ -39,7 +39,7 @@ export function PartnerCard(props: {
             </Text>
           </Pressable>
         ) : (
-          <Text style={s.partnerBody}>You don't have a DateSpot partner yet.</Text>
+          <Text style={s.partnerBody}>You don't have a Date Spot partner yet.</Text>
         )}
       </View>
     </View>

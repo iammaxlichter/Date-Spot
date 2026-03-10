@@ -1,9 +1,10 @@
 // src/screens/FollowersList/components/FollowersRowItem.tsx
 import React from "react";
-import { View, Text, Image, TouchableOpacity } from "react-native";
+import { View, Text, TouchableOpacity } from "react-native";
 
 import { Row } from "../types";
 import { styles } from "../styles";
+import { UserAvatar } from "../../../components/UserAvatar";
 
 export function FollowersRowItem({
   item,
@@ -22,15 +23,7 @@ export function FollowersRowItem({
 }) {
   return (
     <TouchableOpacity activeOpacity={0.8} onPress={() => onPressProfile(item.id)} style={styles.card}>
-      <Image
-        source={
-          item.avatar_url
-            ? { uri: item.avatar_url }
-            : require("../../../../assets/default-avatar.png")
-        }
-        style={styles.avatar}
-        resizeMode="cover"
-      />
+      <UserAvatar uri={item.avatar_url} size={46} style={styles.avatar} />
 
       <View style={styles.usernameWrap}>
         <Text style={styles.username}>@{item.username ?? "unknown"}</Text>

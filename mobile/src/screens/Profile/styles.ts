@@ -9,7 +9,7 @@ export const s = StyleSheet.create({
     backgroundColor: "white",
   },
 
-  avatar: { width: 120, height: 120, borderRadius: 60, marginBottom: 14 },
+  avatar: { width: 120, height: 120, borderRadius: 60, marginBottom: 14, backgroundColor: "#EFEFEF", overflow: "hidden" },
   avatarOverlay: {
     position: "absolute",
     width: 120,
@@ -86,7 +86,7 @@ export const s = StyleSheet.create({
   partnerTitle: { fontSize: 14, fontWeight: "800", marginBottom: 6 },
   partnerBody: { fontSize: 13, color: "#333" },
   partnerRow: { flexDirection: "row", alignItems: "center", gap: 10, marginTop: 6 },
-  partnerAvatar: { width: 36, height: 36, borderRadius: 18 },
+  partnerAvatar: { width: 36, height: 36, borderRadius: 18, backgroundColor: "#EFEFEF", overflow: "hidden" },
   partnerLink: { fontSize: 13, color: "#111", fontWeight: "800" },
   partnerDots: { fontSize: 22, fontWeight: "800", paddingHorizontal: 6 },
 

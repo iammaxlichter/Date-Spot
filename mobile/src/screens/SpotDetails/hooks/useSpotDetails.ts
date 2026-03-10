@@ -78,7 +78,7 @@ export function useSpotDetails(args: { spotId: string; navigation: any }) {
       }
     } catch (e: any) {
       console.error(e);
-      Alert.alert("Error", e?.message ?? "Failed to load DateSpot.");
+      Alert.alert("Error", e?.message ?? "Failed to load Date Spot.");
       navigation.goBack();
     } finally {
       setLoading(false);

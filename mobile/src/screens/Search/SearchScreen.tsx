@@ -18,9 +18,9 @@ export default function SearchScreen() {
     <View style={{ flex: 1, backgroundColor: "#FFFFFF" }}>
       <View
         style={{
-          paddingTop: insets.top + 16,
+          paddingTop: insets.top + 28,
           paddingHorizontal: 20,
-          paddingBottom: 12,
+          paddingBottom: 32,
         }}
       >
         <AppBackButton onPress={() => navigation.goBack()} />

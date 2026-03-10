@@ -42,43 +42,22 @@ export const s = StyleSheet.create({
     borderColor: "#EFEFEF",
     borderRadius: 20,
     backgroundColor: "#FFFFFF",
-    marginBottom: 14,
+    padding: 20,
     shadowColor: "#000",
     shadowOpacity: 0.06,
     shadowRadius: 14,
     shadowOffset: { width: 0, height: 6 },
     elevation: 2,
   },
-  row: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 20,
-    paddingVertical: 18,
-  },
-  rowDivider: {
-    height: 1,
-    backgroundColor: "#F2F2F2",
-    marginHorizontal: 20,
-  },
-  rowText: {
-    fontSize: 15,
-    fontWeight: "600",
+  cardTitle: {
+    fontSize: 16,
+    fontWeight: "700",
     color: "#1D1D1D",
+    marginBottom: 8,
   },
-  rowSubtext: {
-    marginTop: 4,
-    fontSize: 12,
-    lineHeight: 16,
-    color: "#6D6D6D",
-    maxWidth: 240,
-  },
-  rowTextDanger: {
-    color: "#D91B46",
-  },
-  rowChevron: {
-    fontSize: 15,
-    color: "#C8C8C8",
+  cardBody: {
+    fontSize: 14,
+    lineHeight: 20,
+    color: "#616161",
   },
 });
-

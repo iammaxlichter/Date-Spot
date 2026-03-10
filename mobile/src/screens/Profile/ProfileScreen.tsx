@@ -1,6 +1,8 @@
 import React from "react";
-import { View, Alert, ScrollView, RefreshControl, ActivityIndicator } from "react-native";
+import { View, Text, Pressable, Alert, ScrollView, RefreshControl, ActivityIndicator } from "react-native";
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { AppBackButton } from "../../components/navigation/AppBackButton";
 
 import { supabase } from "../../services/supabase/client";
 
@@ -25,6 +27,7 @@ import { SpotsSection } from "./components/SpotsSection";
 
 export default function ProfileScreen() {
   const navigation = useNavigation<any>();
+  const insets = useSafeAreaInsets();
 
   const [loading, setLoading] = React.useState(true);
   const [refreshing, setRefreshing] = React.useState(false);
@@ -220,7 +223,7 @@ export default function ProfileScreen() {
 
       const meU = meProfile?.username ?? "unknown";
       const themU = themProfile?.username ?? "unknown";
-      const message = `@${meU} removed @${themU} as their DateSpot partner.`;
+      const message = `@${meU} removed @${themU} as their Date Spot partner.`;
 
       const { error: eventErr } = await supabase.from("feed_events").insert([
         { user_id: pRow.user_a, type: "partnership", ref_id: pRow.id, message },
@@ -241,18 +244,43 @@ export default function ProfileScreen() {
     }
   }, [partner, removingPartner, loadProfile]);
 
+  const header = (
+    <View style={{
+      paddingTop: insets.top + 28,
+      paddingHorizontal: 20,
+      paddingBottom: 32,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      backgroundColor: "#FFFFFF",
+    }}>
+      <AppBackButton onPress={() => navigation.goBack()} />
+      <Pressable
+        onPress={() => navigation.navigate("Settings")}
+        style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1, paddingHorizontal: 8, paddingVertical: 6 })}
+      >
+        <Text style={{ color: "#111", fontWeight: "600", fontSize: 15 }}>Settings</Text>
+      </Pressable>
+    </View>
+  );
+
   if (loading || !profile) {
     return (
-      <View style={[s.container, { justifyContent: "center" }]}>
-        <ActivityIndicator size="large"  color="#E21E4D" />
+      <View style={{ flex: 1, backgroundColor: "#FFFFFF" }}>
+        {header}
+        <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
+          <ActivityIndicator size="large"  color="#E21E4D" />
+        </View>
       </View>
     );
   }
 
   return (
-    <ScrollView
-      contentContainerStyle={s.container}
-      refreshControl={
+    <View style={{ flex: 1, backgroundColor: "#FFFFFF" }}>
+      {header}
+      <ScrollView
+        contentContainerStyle={[s.container, { paddingTop: 0 }]}
+        refreshControl={
         <RefreshControl
           refreshing={refreshing}
           onRefresh={onRefresh}
@@ -308,5 +336,6 @@ export default function ProfileScreen() {
         onRemovePartner={removePartner}
       />
     </ScrollView>
+    </View>
   );
 }

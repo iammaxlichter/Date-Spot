@@ -4,6 +4,7 @@ import type { Price, BestFor } from "../../types/datespot";
 export type GooglePrediction = {
   description: string;
   place_id: string;
+  types?: string[];
 };
 
 export type Coords = {

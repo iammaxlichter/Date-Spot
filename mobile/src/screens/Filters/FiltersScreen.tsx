@@ -113,7 +113,7 @@ export default function FiltersScreen({ navigation }: Props) {
   return (
     <View style={styles.container}>
       <ScrollView
-        contentContainerStyle={[styles.content, { paddingTop: insets.top + 20 }]}
+        contentContainerStyle={[styles.content, { paddingTop: insets.top + 28 }]}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
@@ -326,7 +326,7 @@ const styles = StyleSheet.create({
   },
   backButton: {
     alignSelf: "flex-start",
-    marginBottom: 24,
+    marginBottom: 32,
   },
   hero: {
     marginBottom: 20,

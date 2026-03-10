@@ -457,7 +457,7 @@ export default function FeedScreen() {
         ListEmptyComponent={
           <View style={s.empty}>
             <Text style={s.emptyTitle}>No spots yet</Text>
-            <Text style={s.emptyText}>Create your first DateSpot and it&apos;ll show up here.</Text>
+            <Text style={s.emptyText}>Create your first Date Spot and it&apos;ll show up here.</Text>
           </View>
         }
         ListFooterComponent={

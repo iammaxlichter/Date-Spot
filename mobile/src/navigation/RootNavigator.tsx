@@ -1,7 +1,7 @@
 // src/navigation/RootNavigator.tsx
 import "react-native-gesture-handler";
 import React from "react";
-import { View, TouchableOpacity, Text } from "react-native";
+import { View } from "react-native";
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { SafeAreaProvider } from "react-native-safe-area-context";
@@ -19,6 +19,7 @@ import SettingsScreen from "../screens/Settings/SettingsScreen";
 import EditProfileScreen from "../screens/EditProfile/EditProfileScreen";
 import FiltersScreen from "../screens/Filters/FiltersScreen";
 import ProfileSetupScreen from "../screens/ProfileSetup/ProfileSetupScreen";
+import PrivacySettingsScreen from "../screens/PrivacySettings/PrivacySettingsScreen";
 
 import {
   SpotCreationProvider,
@@ -44,7 +45,8 @@ function NavigatorContent() {
   const [profileSetupComplete, setProfileSetupComplete] = React.useState(true);
   const splashStartTimeRef = React.useRef(Date.now());
   const { isCreatingSpot, isEditingSpot } = useSpotCreation();
-  const showBottomOverlay = activeRoute === "Feed" || activeRoute === "Search" || activeRoute === "Profile";
+  const SHOW_BAR_ROUTES = new Set(["Home", "Feed", "Search", "Profile", "Map", "Users"]);
+  const showBottomOverlay = SHOW_BAR_ROUTES.has(activeRoute) && !isCreatingSpot && !isEditingSpot;
 
   React.useEffect(() => {
     if (booting || !showLaunchSplash) return;
@@ -101,6 +103,10 @@ function NavigatorContent() {
   return (
     <NavigationContainer
       ref={navigationRef}
+      onReady={() => {
+        const route = navigationRef.getCurrentRoute();
+        if (route?.name) setActiveRoute(route.name);
+      }}
       onStateChange={() => {
         const route = navigationRef.getCurrentRoute();
         if (route?.name) setActiveRoute(route.name);
@@ -142,26 +148,20 @@ function NavigatorContent() {
                   <Stack.Screen
                     name="Profile"
                     component={ProfileScreen}
-                    options={({ navigation }) => ({
-                      title: "Profile",
-                      headerShadowVisible: false,
-                      headerBackTitle: "",
-                      headerRight: () => (
-                        <TouchableOpacity
-                          onPress={() => navigation.navigate("Settings")}
-                          style={{ paddingHorizontal: 8, paddingVertical: 6 }}
-                        >
-                          <Text style={{ color: "#111", fontWeight: "600" }}>
-                            Settings
-                          </Text>
-                        </TouchableOpacity>
-                      ),
-                    })}
+                    options={{ headerShown: false }}
                   />
 
                   <Stack.Screen
                     name="Settings"
                     component={SettingsScreen}
+                    options={{
+                      headerShown: false,
+                    }}
+                  />
+
+                  <Stack.Screen
+                    name="PrivacySettings"
+                    component={PrivacySettingsScreen}
                     options={{
                       headerShown: false,
                     }}
@@ -214,7 +214,7 @@ function NavigatorContent() {
                     name="SpotDetails"
                     component={SpotDetailsScreen}
                     options={{
-                      title: "DateSpot",
+                      title: "Date Spot",
                       headerShadowVisible: false,
                     }}
                   />
@@ -223,7 +223,7 @@ function NavigatorContent() {
                     name="EditSpot"
                     component={EditSpotScreen}
                     options={{
-                      title: "Edit DateSpot",
+                      title: "Edit Date Spot",
                       headerShadowVisible: false,
                     }}
                   />
@@ -251,7 +251,7 @@ function NavigatorContent() {
           )}
         </Stack.Navigator>
 
-        {session && profileSetupComplete && !isCreatingSpot && !isEditingSpot && showBottomOverlay && (
+        {session && profileSetupComplete && showBottomOverlay && (
           <BottomOverlay
             activeRoute={activeRoute}
             onGoHome={() => {

@@ -34,3 +34,5 @@ coverage/
 .env.*
 !.env.example
 !.env.sample
+
+supabase/.temp

@@ -1,7 +1,7 @@
 // src/screens/Map/MapScreen.tsx
 import React, { useRef, useEffect, useCallback } from "react";
 import { View, ActivityIndicator, Alert, Text, Keyboard } from "react-native";
-import MapView, { Region } from "react-native-maps";
+import MapView from "react-native-maps";
 
 import { useFocusEffect } from "@react-navigation/native";
 import { NewSpotSheetScreen } from "../NewSpotSheet/NewSpotSheetScreen";
@@ -40,6 +40,7 @@ import {
 
 export default function MapScreen({ navigation }: any) {
   const mapRef = useRef<MapView | null>(null);
+  const searchAnimationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const { setIsCreatingSpot } = useSpotCreationContext();
   const [photos, setPhotos] = React.useState<SpotPhotoItem[]>([]);
   const [selectedTaggedUsers, setSelectedTaggedUsers] = React.useState<TaggedUser[]>([]);
@@ -151,17 +152,57 @@ export default function MapScreen({ navigation }: any) {
     setIsCreatingSpot(isCreating);
   }, [spotCreation.isPlacingPin, spotCreation.showNewSpotSheet, setIsCreatingSpot]);
 
+  useEffect(() => {
+    return () => {
+      if (searchAnimationTimerRef.current) {
+        clearTimeout(searchAnimationTimerRef.current);
+      }
+    };
+  }, []);
+
+  const animateSearchSelection = useCallback(
+    (latitude: number, longitude: number, zoom: { latitudeDelta: number; longitudeDelta: number }) => {
+      const map = mapRef.current;
+      if (!map || !region) {
+        setRegion({ latitude, longitude, ...zoom });
+        return;
+      }
+
+      if (searchAnimationTimerRef.current) {
+        clearTimeout(searchAnimationTimerRef.current);
+      }
+
+      // Step 1: pan to the destination while keeping current zoom level.
+      map.animateToRegion(
+        {
+          latitude,
+          longitude,
+          latitudeDelta: region.latitudeDelta,
+          longitudeDelta: region.longitudeDelta,
+        },
+        450
+      );
+
+      // Step 2: gently zoom in after the pan starts.
+      searchAnimationTimerRef.current = setTimeout(() => {
+        map.animateToRegion(
+          {
+            latitude,
+            longitude,
+            ...zoom,
+          },
+          850
+        );
+        searchAnimationTimerRef.current = null;
+      }, 220);
+    },
+    [region, setRegion]
+  );
+
   const handleSelectSavedSpot = (spot: MapSpot) => {
     Keyboard.dismiss();
 
-    const targetRegion: Region = {
-      latitude: spot.latitude,
-      longitude: spot.longitude,
-      ...ZOOM_TO_SAVED_SPOT,
-    };
-
-    setRegion(targetRegion);
-    mapRef.current?.animateToRegion(targetRegion, 250);
+    animateSearchSelection(spot.latitude, spot.longitude, ZOOM_TO_SAVED_SPOT);
 
     setSearchQuery(spot.name);
     setShowSuggestions(false);
@@ -182,14 +223,7 @@ export default function MapScreen({ navigation }: any) {
       const latitude = result.geometry.location.lat;
       const longitude = result.geometry.location.lng;
 
-      const targetRegion: Region = {
-        latitude,
-        longitude,
-        ...ZOOM_TO_GOOGLE_PLACE,
-      };
-
-      setRegion(targetRegion);
-      mapRef.current?.animateToRegion(targetRegion, 500);
+      animateSearchSelection(latitude, longitude, ZOOM_TO_GOOGLE_PLACE);
 
       setSearchQuery(result.name || prediction.description);
       setShowSuggestions(false);

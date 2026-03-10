@@ -283,6 +283,9 @@ export function SpotsMap(props: {
   return (
     <View
       style={{ flex: 1 }}
+      onTouchStart={() => {
+        Keyboard.dismiss();
+      }}
       onLayout={(e) =>
         setContainerSize({
           width: e.nativeEvent.layout.width,
@@ -294,6 +297,9 @@ export function SpotsMap(props: {
         ref={mapRef}
         style={{ flex: 1 }}
         initialRegion={region}
+        showsPointsOfInterest
+        showsBuildings
+        showsIndoors
         moveOnMarkerPress={false}
         zoomEnabled={!gestureLock}
         pitchEnabled={!gestureLock}

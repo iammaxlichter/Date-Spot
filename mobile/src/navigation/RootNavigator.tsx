@@ -45,7 +45,7 @@ function NavigatorContent() {
   const [profileSetupComplete, setProfileSetupComplete] = React.useState(true);
   const splashStartTimeRef = React.useRef(Date.now());
   const { isCreatingSpot, isEditingSpot } = useSpotCreation();
-  const SHOW_BAR_ROUTES = new Set(["Home", "Feed", "Search", "Profile"]);
+  const SHOW_BAR_ROUTES = new Set(["Home", "Feed", "Search", "Profile", "Map", "Users"]);
   const showBottomOverlay = SHOW_BAR_ROUTES.has(activeRoute) && !isCreatingSpot && !isEditingSpot;
 
   React.useEffect(() => {

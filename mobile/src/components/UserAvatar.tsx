@@ -1,5 +1,5 @@
 import React from "react";
-import { Image, StyleProp, ViewStyle } from "react-native";
+import { Image, ImageStyle, StyleProp } from "react-native";
 
 const DEFAULT_AVATAR = require("../../assets/default-avatar.png");
 
@@ -10,7 +10,7 @@ export function UserAvatar({
 }: {
   uri?: string | null;
   size: number;
-  style?: StyleProp<ViewStyle>;
+  style?: StyleProp<ImageStyle>;
 }) {
   const [imageFailed, setImageFailed] = React.useState(false);
 

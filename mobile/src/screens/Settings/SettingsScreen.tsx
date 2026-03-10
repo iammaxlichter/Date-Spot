@@ -48,7 +48,21 @@ export default function SettingsScreen({ navigation }: Props) {
         >
           <View style={s.row}>
             <Text style={s.rowText}>Edit Profile</Text>
-            <Text style={s.rowChevron}>›</Text>
+            <Text style={s.rowChevron}>{">"}</Text>
+          </View>
+        </Pressable>
+
+        <View style={s.rowDivider} />
+
+        <Pressable
+          style={({ pressed }) => pressed && { opacity: 0.6 }}
+          onPress={() => navigation.navigate("PrivacySettings")}
+        >
+          <View style={s.row}>
+            <View>
+              <Text style={s.rowText}>Privacy and Access</Text>
+            </View>
+            <Text style={s.rowChevron}>{">"}</Text>
           </View>
         </Pressable>
       </View>

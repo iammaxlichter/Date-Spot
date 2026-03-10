@@ -1,6 +1,7 @@
 import React from "react";
-import { View, Text, Image, Pressable, ActivityIndicator, ImageSourcePropType } from "react-native";
+import { View, Text, Pressable, ActivityIndicator } from "react-native";
 import { s } from "../styles";
+import { UserAvatar } from "../../../components/UserAvatar";
 
 export function AvatarSection(props: {
   uploading: boolean;
@@ -12,14 +13,10 @@ export function AvatarSection(props: {
 }) {
   const { uploading, avatarUrl, username, name, onPressAvatar, onPressName } = props;
 
-  const avatarSource: ImageSourcePropType = avatarUrl
-    ? { uri: avatarUrl }
-    : require("../../../../assets/default-avatar.png");
-
   return (
     <>
       <Pressable onPress={onPressAvatar} disabled={uploading}>
-        <Image source={avatarSource} style={s.avatar} />
+        <UserAvatar uri={avatarUrl} size={120} style={s.avatar} />
         {uploading && (
           <View style={s.avatarOverlay}>
             <ActivityIndicator size="large"  color="#E21E4D" />

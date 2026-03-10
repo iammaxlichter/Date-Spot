@@ -73,7 +73,7 @@ export function PartnerSection(props: Props) {
       if (!ok) {
         Alert.alert(
           "Follow each other to partner",
-          "You both need to follow each other before you can become DateSpot partners."
+          "You both need to follow each other before you can become Date Spot partners."
         );
         return;
       }
@@ -81,7 +81,7 @@ export function PartnerSection(props: Props) {
       const p = await requestPartner(me, them);
 
       const [meU, otherU] = await Promise.all([getUsername(me), getUsername(them)]);
-      const msg = `@${meU} sent a DateSpot partnership request to @${otherU}.`;
+      const msg = `@${meU} sent a Date Spot partnership request to @${otherU}.`;
       await insertEventForBoth(p.user_a, p.user_b, p.id, msg);
 
       await refreshPartnershipState(me, them);
@@ -101,7 +101,7 @@ export function PartnerSection(props: Props) {
 
       const updated = await cancelRequest(partnership.id);
       const [meU, otherU] = await Promise.all([getUsername(me), getUsername(them)]);
-      const msg = `@${meU} cancelled their DateSpot partnership request to @${otherU}.`;
+      const msg = `@${meU} cancelled their Date Spot partnership request to @${otherU}.`;
       await insertEventForBoth(updated.user_a, updated.user_b, updated.id, msg);
 
       await refreshPartnershipState(me, them);
@@ -148,7 +148,7 @@ export function PartnerSection(props: Props) {
     return (
       <View style={s.partnerCard}>
         <View style={s.partnerHeaderRow}>
-          <Text style={s.partnerTitle}>DateSpot partners</Text>
+          <Text style={s.partnerTitle}>Date Spot partners</Text>
           {isMyPartner ? (
             <Pressable onPress={onOpenMenu} hitSlop={10}>
               <Text style={s.partnerDots}>⋯</Text>
@@ -166,7 +166,7 @@ export function PartnerSection(props: Props) {
       <View style={s.partnerCard}>
         <Text style={s.partnerTitle}>Partner request</Text>
         <Text style={[s.partnerBody, { marginTop: 6 }]}>
-          This person wants to connect as your DateSpot partner.
+          This person wants to connect as your Date Spot partner.
         </Text>
 
         <View style={{ flexDirection: "row", gap: 10, marginTop: 12 }}>
@@ -212,8 +212,8 @@ export function PartnerSection(props: Props) {
         <Text style={s.partnerTitle}>Unavailable</Text>
         <Text style={[s.partnerBody, { marginTop: 6 }]}>
           {iHavePartner
-            ? "You already have a DateSpot partner. Remove them before requesting someone new."
-            : "This user already has a DateSpot partner."}
+            ? "You already have a Date Spot partner. Remove them before requesting someone new."
+            : "This user already has a Date Spot partner."}
         </Text>
       </View>
     );
@@ -227,7 +227,7 @@ export function PartnerSection(props: Props) {
       style={[s.primaryWideBtn, partnerUpdating && { opacity: 0.6 }]}
     >
       <Text style={s.primaryWideBtnText}>
-        {partnerUpdating ? "Sending..." : "Ask to be DateSpot partner"}
+        {partnerUpdating ? "Sending..." : "Ask to be Date Spot partner"}
       </Text>
     </Pressable>
   );

@@ -43,7 +43,7 @@ export default function FollowersListScreen({ route }: any) {
 
   return (
     <Pressable style={styles.container} onPress={Keyboard.dismiss}>
-      <View style={[styles.header, { paddingTop: insets.top + 20 }]}>
+      <View style={[styles.header, { paddingTop: insets.top + 28 }]}>
         <View style={styles.backButton}>
           <AppBackButton onPress={() => navigation.goBack()} />
         </View>

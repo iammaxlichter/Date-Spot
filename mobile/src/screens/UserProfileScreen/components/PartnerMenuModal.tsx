@@ -25,7 +25,7 @@ export function PartnerMenuModal(props: {
             style={[s.menuItem, removing && { opacity: 0.6 }]}
           >
             <Text style={s.menuDanger}>
-              {removing ? "Removing..." : "Remove DateSpot partner"}
+              {removing ? "Removing..." : "Remove Date Spot partner"}
             </Text>
           </Pressable>
 

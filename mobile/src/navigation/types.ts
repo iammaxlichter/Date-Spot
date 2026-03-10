@@ -13,6 +13,7 @@ export type RootStackParamList = {
   Home: undefined;
   Profile: undefined;
   Settings: undefined;
+  PrivacySettings: undefined;
   EditProfile: undefined;
   Search: NavigatorScreenParams<SearchTabParamList> | undefined;
   Filters: undefined;

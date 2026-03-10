@@ -116,8 +116,8 @@ export async function requestPartner(me: string, them: string) {
       getAcceptedPartnershipForUser(them),
     ]);
 
-    if (myPartnership) throw new Error("You already have a DateSpot partner.");
-    if (theirPartnership) throw new Error("This user already has a DateSpot partner.");
+    if (myPartnership) throw new Error("You already have a Date Spot partner.");
+    if (theirPartnership) throw new Error("This user already has a Date Spot partner.");
 
     const mutual = await isMutualFollow(me, them);
     if (!mutual) throw new Error("You must both follow each other to become partners.");
@@ -172,10 +172,10 @@ export async function acceptRequest(partnershipId: string) {
     ]);
 
     if (userAPartnership && userAPartnership.id !== partnershipId) {
-      throw new Error("One of you already has a DateSpot partner.");
+      throw new Error("One of you already has a Date Spot partner.");
     }
     if (userBPartnership && userBPartnership.id !== partnershipId) {
-      throw new Error("One of you already has a DateSpot partner.");
+      throw new Error("One of you already has a Date Spot partner.");
     }
 
     const { data, error } = await supabase

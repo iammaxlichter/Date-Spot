@@ -26,19 +26,25 @@ function AppDrawerContent(props: DrawerContentComponentProps) {
   return (
     <DrawerContentScrollView
       {...props}
-      contentContainerStyle={[navStyles.drawerContent, { paddingTop: insets.top + 6 }]}
+      scrollEnabled={false}
+      contentContainerStyle={[navStyles.drawerContent, { paddingTop: insets.top + 24 }]}
     >
       <View style={navStyles.drawerHeaderRow}>
-        <Text style={navStyles.drawerHeaderTitle}>Navigation</Text>
+        <View>
+          <Text style={navStyles.drawerEyebrow}>MENU</Text>
+          <Text style={navStyles.drawerHeaderTitle}>Navigate</Text>
+        </View>
         <TouchableOpacity
           accessibilityRole="button"
           accessibilityLabel="Close navigation"
           style={navStyles.drawerCloseButton}
           onPress={() => props.navigation.closeDrawer()}
         >
-          <Text style={navStyles.drawerCloseIcon}>X</Text>
+          <Text style={navStyles.drawerCloseIcon}>✕</Text>
         </TouchableOpacity>
       </View>
+
+      <View style={navStyles.drawerDivider} />
 
       {DRAWER_ITEMS.map((routeName) => {
         const isActive = routeName === "Feed" && activeRoute === "Feed";

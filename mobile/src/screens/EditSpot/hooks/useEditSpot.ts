@@ -78,7 +78,7 @@ export function useEditSpot(args: { spotId: string; navigation: any }) {
 
       // UI-level guard (RLS should still enforce server-side)
       if (currentUserId && row.user_id !== currentUserId) {
-        Alert.alert("Not allowed", "You can only edit your own DateSpots.");
+        Alert.alert("Not allowed", "You can only edit your own Date Spots.");
         navigation.goBack();
         return;
       }
@@ -112,7 +112,7 @@ export function useEditSpot(args: { spotId: string; navigation: any }) {
       }
     } catch (e: any) {
       console.error(e);
-      Alert.alert("Error", e?.message ?? "Failed to load DateSpot.");
+      Alert.alert("Error", e?.message ?? "Failed to load Date Spot.");
       navigation.goBack();
     } finally {
       setTagUsersLoading(false);
@@ -194,7 +194,7 @@ export function useEditSpot(args: { spotId: string; navigation: any }) {
           selectedTaggedUsers.map((u) => u.id)
         );
 
-        Alert.alert("Saved", "Your DateSpot was updated.");
+        Alert.alert("Saved", "Your Date Spot was updated.");
         navigation.goBack();
       } catch (e: any) {
         console.error(e);

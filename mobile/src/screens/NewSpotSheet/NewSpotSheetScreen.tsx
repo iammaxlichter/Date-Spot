@@ -140,7 +140,7 @@ export function NewSpotSheetScreen({
             {showPartnerQuestion ? (
               <View style={styles.partnerPromptCard}>
                 <Text style={styles.partnerPromptTitle}>
-                  Did you go with your DateSpot partner @{activePartner?.username ?? "your-partner"}?
+                  Did you go with your Date Spot partner @{activePartner?.username ?? "your-partner"}?
                 </Text>
                 <View style={styles.partnerPromptButtonsRow}>
                   <TouchableOpacity

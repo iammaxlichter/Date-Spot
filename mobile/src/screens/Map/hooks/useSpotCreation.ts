@@ -147,6 +147,7 @@ export function useSpotCreation(params: {
     setShowNewSpotSheet(false);
   };
 
+
   const cancelNewSpot = () => {
     setShowNewSpotSheet(false);
     setIsPlacingPin(false);

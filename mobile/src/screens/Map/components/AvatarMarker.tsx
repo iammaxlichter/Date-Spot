@@ -13,13 +13,11 @@ type Props = {
 
 function AvatarMarkerInner({ spot, onPress }: Props) {
   const [imageFailed, setImageFailed] = React.useState(false);
-  const [tracksViewChanges, setTracksViewChanges] = React.useState<boolean>(
-    !!spot.author.avatar_url
-  );
+  const [tracksViewChanges, setTracksViewChanges] = React.useState(true);
 
   React.useEffect(() => {
     setImageFailed(false);
-    setTracksViewChanges(!!spot.author.avatar_url);
+    setTracksViewChanges(true);
   }, [spot.author.avatar_url]);
 
   const coordinate = React.useMemo(
@@ -54,7 +52,11 @@ function AvatarMarkerInner({ spot, onPress }: Props) {
             }}
           />
         ) : (
-          <Image source={DEFAULT_AVATAR} style={styles.avatar} />
+          <Image
+            source={DEFAULT_AVATAR}
+            style={styles.avatar}
+            onLoadEnd={() => setTracksViewChanges(false)}
+          />
         )}
       </View>
     </Marker>

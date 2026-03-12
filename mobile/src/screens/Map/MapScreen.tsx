@@ -201,9 +201,7 @@ export default function MapScreen({ navigation }: any) {
 
   const handleSelectSavedSpot = (spot: MapSpot) => {
     Keyboard.dismiss();
-
     animateSearchSelection(spot.latitude, spot.longitude, ZOOM_TO_SAVED_SPOT);
-
     setSearchQuery(spot.name);
     setShowSuggestions(false);
     clearGoogleResults();
@@ -222,10 +220,11 @@ export default function MapScreen({ navigation }: any) {
 
       const latitude = result.geometry.location.lat;
       const longitude = result.geometry.location.lng;
+      const name = result.name || prediction.description;
 
       animateSearchSelection(latitude, longitude, ZOOM_TO_GOOGLE_PLACE);
 
-      setSearchQuery(result.name || prediction.description);
+      setSearchQuery(name);
       setShowSuggestions(false);
       clearGoogleResults();
       Keyboard.dismiss();
@@ -238,7 +237,7 @@ export default function MapScreen({ navigation }: any) {
   if (loading || !region) {
     return (
       <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-        <ActivityIndicator size="large"  color="#E21E4D" />
+        <ActivityIndicator size="large" color="#E21E4D" />
         <Text>Loading map…</Text>
       </View>
     );
@@ -298,6 +297,11 @@ export default function MapScreen({ navigation }: any) {
         onDragEnd={spotCreation.updateCoords}
         onPressMap={() => setShowSuggestions(false)}
         savingPin={savingPin}
+        onPinRegionChange={spotCreation.updateCoords}
+        onPoiPress={(coords) => {
+          animateSearchSelection(coords.latitude, coords.longitude, ZOOM_TO_GOOGLE_PLACE);
+          setShowSuggestions(false);
+        }}
       />
 
       {spotCreation.showNewSpotSheet && spotCreation.newSpotCoords && (
@@ -346,16 +350,12 @@ export default function MapScreen({ navigation }: any) {
             spotCreation.cancelNewSpot();
           }}
           onSave={() => {
-            // Capture before clearing state
             const localPhotos = photos.filter((p) => p.kind === "local");
             const tagIds = selectedTaggedUsers.map((u) => u.id);
-            // Clear immediately (form is about to close)
             setPhotos([]);
             setSelectedTaggedUsers([]);
             setActivePartner(null);
             setPartnerAnswer(null);
-            // Fire-and-forget: saveNewSpot closes the form, shows optimistic pin,
-            // then uploads photos in the background. Errors surface via Alert.
             void spotCreation.saveNewSpot(localPhotos, tagIds);
           }}
         />
@@ -363,7 +363,3 @@ export default function MapScreen({ navigation }: any) {
     </View>
   );
 }
-
-
-
-

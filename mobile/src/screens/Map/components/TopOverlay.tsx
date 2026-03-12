@@ -97,6 +97,7 @@ export function TopOverlay(props: {
       {hasActiveFilters ? (
         <Text style={styles.activeFiltersLabel}>Filters: {activeFilterCount} active</Text>
       ) : null}
+
     </View>
   );
 }

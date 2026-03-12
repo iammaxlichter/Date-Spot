@@ -328,6 +328,41 @@ export const styles = StyleSheet.create({
     fontSize: 16,
   },
 
+  googlePlaceBanner: {
+    marginTop: 8,
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FFFFFF",
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#E7E7E7",
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    shadowColor: "#000",
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
+  },
+  googlePlaceBannerName: {
+    flex: 1,
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#1D1D1D",
+  },
+  googlePlaceBannerAdd: {
+    backgroundColor: "#E21E4D",
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    marginHorizontal: 8,
+  },
+  googlePlaceBannerAddText: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#FFFFFF",
+  },
+
   profileIconButton: {
     width: 36,
     height: 36,

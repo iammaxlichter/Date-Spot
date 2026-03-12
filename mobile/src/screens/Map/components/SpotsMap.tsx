@@ -9,10 +9,11 @@ import {
   Text,
   View,
 } from "react-native";
-import MapView, { Callout, Marker, Region, type MarkerPressEvent } from "react-native-maps";
+import MapView, { Callout, Marker, PROVIDER_GOOGLE, Region, type MarkerPressEvent } from "react-native-maps";
 import type { MapSpot } from "../../../services/api/spots";
 import { GREY_MAP_STYLE } from "../constants";
 import { AvatarMarker } from "./AvatarMarker";
+import { CenterPin } from "./CenterPin";
 
 /* ─── popup positioning constants ─── */
 const POPUP_WIDTH = 280;
@@ -122,6 +123,8 @@ export function SpotsMap(props: {
   onDragEnd: (coords: { latitude: number; longitude: number }) => void;
   onPressMap: () => void;
   savingPin?: { latitude: number; longitude: number; name: string } | null;
+  onPoiPress?: (coords: { latitude: number; longitude: number }) => void;
+  onPinRegionChange?: (coords: { latitude: number; longitude: number }) => void;
 }) {
   const {
     mapRef,
@@ -133,7 +136,11 @@ export function SpotsMap(props: {
     onDragEnd,
     onPressMap,
     savingPin,
+    onPoiPress,
+    onPinRegionChange,
   } = props;
+
+  const [mapDragging, setMapDragging] = React.useState(false);
 
   const [activePopup, setActivePopup] = React.useState<ActivePopup | null>(null);
   const [popupAnchorPoint, setPopupAnchorPoint] = React.useState<{ x: number; y: number } | null>(
@@ -296,6 +303,7 @@ export function SpotsMap(props: {
       <MapView
         ref={mapRef}
         style={{ flex: 1 }}
+        provider={PROVIDER_GOOGLE}
         initialRegion={region}
         showsPointsOfInterest
         showsBuildings
@@ -307,15 +315,26 @@ export function SpotsMap(props: {
         onPanDrag={dismissPopupWithFade}
         onRegionChange={(nextRegion) => {
           regionRef.current = nextRegion;
+          if (isPlacingPin) setMapDragging(true);
           if (!activePopup) return;
           setPopupAnchorPoint(projectSpotAnchorFromRegion(activePopup.spot, nextRegion));
         }}
-        onRegionChangeComplete={onRegionChangeComplete}
+        onRegionChangeComplete={(r) => {
+          setMapDragging(false);
+          if (isPlacingPin) {
+            onPinRegionChange?.({ latitude: r.latitude, longitude: r.longitude });
+          }
+          onRegionChangeComplete(r);
+        }}
         customMapStyle={isPlacingPin ? GREY_MAP_STYLE : []}
         onPress={() => {
           dismissPopup();
           Keyboard.dismiss();
           onPressMap();
+        }}
+        onPoiClick={(e) => {
+          const { coordinate } = e.nativeEvent;
+          onPoiPress?.({ latitude: coordinate.latitude, longitude: coordinate.longitude });
         }}
       >
         {spots.map((spot) => (
@@ -326,17 +345,6 @@ export function SpotsMap(props: {
           />
         ))}
 
-        {isPlacingPin && newSpotCoords && (
-          <Marker
-            coordinate={newSpotCoords}
-            draggable
-            pinColor="red"
-            onDragEnd={(e) => {
-              const { latitude, longitude } = e.nativeEvent.coordinate;
-              onDragEnd({ latitude, longitude });
-            }}
-          />
-        )}
 
         {savingPin && (
           <Marker
@@ -356,6 +364,9 @@ export function SpotsMap(props: {
           </Marker>
         )}
       </MapView>
+
+      {/* Center pin for spot placement */}
+      {isPlacingPin && <CenterPin dragging={mapDragging} />}
 
       {/* JS overlay popup — dismissed instantly by setState, no native animation */}
       {activePopup && popupStyle ? (

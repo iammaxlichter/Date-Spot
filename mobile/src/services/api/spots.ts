@@ -104,17 +104,15 @@ type JoinedProfile = {
   name: string | null;
 };
 
+const AVATAR_SIGNED_URL_TTL_SECONDS = 3600;
+const avatarSignedUrlCache = new Map<string, { signedUrl: string; expiresAt: number }>();
+
 function extractProfilePicturePath(input: string | null | undefined): string | null {
   if (!input) return null;
 
   if (input.startsWith("http://") || input.startsWith("https://")) {
-    const marker = "/profile_pictures/";
-    const idx = input.indexOf(marker);
-    if (idx === -1) return null;
-    const after = input.slice(idx + marker.length);
-    if (!after) return null;
-    const clean = after.split("?")[0];
-    return clean || null;
+    // Already a full URL (public or pre-signed); use as-is to preserve caching.
+    return null;
   }
 
   return input;
@@ -133,38 +131,47 @@ function toAtmosphereFilterValues(values: number[]): string[] {
 async function signProfileAvatarUrls(
   profileRows: Array<{ key: string; avatar_url: string | null }>
 ): Promise<Map<string, string>> {
+  const resolvedByKey = new Map<string, string>();
   const avatarPathByKey = new Map<string, string>();
-  const avatarPaths = Array.from(
-    new Set(
-      profileRows
-        .map((row) => {
-          const path = extractProfilePicturePath(row.avatar_url);
-          if (path) avatarPathByKey.set(row.key, path);
-          return path;
-        })
-        .filter((v): v is string => !!v)
-    )
-  );
 
-  const signedAvatarByPath = new Map<string, string>();
-  if (avatarPaths.length > 0) {
+  const now = Date.now();
+  for (const row of profileRows) {
+    if (!row.avatar_url) continue;
+    if (row.avatar_url.startsWith("http://") || row.avatar_url.startsWith("https://")) {
+      resolvedByKey.set(row.key, row.avatar_url);
+      continue;
+    }
+
+    const path = extractProfilePicturePath(row.avatar_url);
+    if (path) avatarPathByKey.set(row.key, path);
+  }
+
+  const avatarPathsToSign = Array.from(new Set(avatarPathByKey.values())).filter((path) => {
+    const cached = avatarSignedUrlCache.get(path);
+    return !cached || cached.expiresAt <= now + 30_000;
+  });
+
+  if (avatarPathsToSign.length > 0) {
     const { data: signedData } = await supabase.storage
       .from("profile_pictures")
-      .createSignedUrls(avatarPaths, 3600);
+      .createSignedUrls(avatarPathsToSign, AVATAR_SIGNED_URL_TTL_SECONDS);
 
     for (const item of signedData ?? []) {
       if (item?.path && item?.signedUrl) {
-        signedAvatarByPath.set(item.path, item.signedUrl);
+        avatarSignedUrlCache.set(item.path, {
+          signedUrl: item.signedUrl,
+          expiresAt: now + AVATAR_SIGNED_URL_TTL_SECONDS * 1000,
+        });
       }
     }
   }
 
-  const resolvedByKey = new Map<string, string>();
   for (const row of profileRows) {
+    if (resolvedByKey.has(row.key)) continue;
     const path = avatarPathByKey.get(row.key);
     if (!path) continue;
-    const signed = signedAvatarByPath.get(path);
-    if (signed) resolvedByKey.set(row.key, signed);
+    const cached = avatarSignedUrlCache.get(path);
+    if (cached?.signedUrl) resolvedByKey.set(row.key, cached.signedUrl);
   }
   return resolvedByKey;
 }
@@ -392,40 +399,9 @@ export async function getFollowedMapSpots(limit = 500, filters?: SpotFilters): P
 
   const tagsBySpot = await fetchSpotTagsForSpotIds(rows.map((row) => row.id));
 
-  const avatarPathBySpotId = new Map<string, string>();
-  const avatarPaths = Array.from(
-    new Set(
-      rows
-        .map((row) => {
-          const profile = normalizeJoinedProfile(row.profiles);
-          const raw = profile?.avatar_url ?? null;
-          const path = extractProfilePicturePath(raw);
-          if (path) avatarPathBySpotId.set(row.id, path);
-          return path;
-        })
-        .filter((v): v is string => !!v)
-    )
-  );
-
-  const signedAvatarByPath = new Map<string, string>();
-  if (avatarPaths.length > 0) {
-    const { data: signedData } = await supabase.storage
-      .from("profile_pictures")
-      .createSignedUrls(avatarPaths, 3600);
-
-    for (const item of signedData ?? []) {
-      if (item?.path && item?.signedUrl) {
-        signedAvatarByPath.set(item.path, item.signedUrl);
-      }
-    }
-  }
-
   return rows.map((row) => {
     const profile = normalizeJoinedProfile(row.profiles);
-    const rawAvatar = profile?.avatar_url ?? null;
-    const avatarPath = avatarPathBySpotId.get(row.id) ?? null;
-    const resolvedAvatar =
-      (avatarPath ? signedAvatarByPath.get(avatarPath) : null) ?? rawAvatar;
+    const resolvedAvatar = profile?.avatar_url ?? null;
 
     return {
     id: row.id,

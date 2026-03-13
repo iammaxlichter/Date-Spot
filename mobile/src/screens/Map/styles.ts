@@ -38,11 +38,15 @@ export const styles = StyleSheet.create({
   actionRow: {
     marginTop: 8,
     flexDirection: "row",
-    alignItems: "center",
+    alignItems: "flex-start",
   },
   actionRowSpacer: {
     flex: 1,
     minHeight: 50,
+  },
+  rightActionColumn: {
+    alignItems: "stretch",
+    minWidth: 122,
   },
   activeFiltersLabel: {
     marginTop: 6,
@@ -74,6 +78,43 @@ export const styles = StyleSheet.create({
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 2 },
     elevation: 2,
+  },
+  partnerSpotsButton: {
+    marginTop: 8,
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "#E7E7E7",
+    borderRadius: 12,
+    minHeight: 44,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#000",
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
+  },
+  partnerSpotsButtonActive: {
+    borderColor: "#E21E4D",
+    backgroundColor: "#E21E4D",
+  },
+  partnerSpotsButtonInactive: {
+    borderColor: "#CDD4DF",
+    backgroundColor: "#EEF1F5",
+  },
+  partnerSpotsButtonText: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#1D1D1D",
+  },
+  partnerSpotsButtonTextActive: {
+    color: "#FFFFFF",
+  },
+  partnerSpotsButtonTextInactive: {
+    color: "#495465",
   },
   filtersButtonActive: {
     borderColor: "#E21E4D",
@@ -326,6 +367,41 @@ export const styles = StyleSheet.create({
     color: "#111",
     fontWeight: "800",
     fontSize: 16,
+  },
+
+  googlePlaceBanner: {
+    marginTop: 8,
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FFFFFF",
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#E7E7E7",
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    shadowColor: "#000",
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
+  },
+  googlePlaceBannerName: {
+    flex: 1,
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#1D1D1D",
+  },
+  googlePlaceBannerAdd: {
+    backgroundColor: "#E21E4D",
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    marginHorizontal: 8,
+  },
+  googlePlaceBannerAddText: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#FFFFFF",
   },
 
   profileIconButton: {

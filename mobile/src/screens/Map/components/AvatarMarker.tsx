@@ -13,14 +13,44 @@ type Props = {
 
 function AvatarMarkerInner({ spot, onPress }: Props) {
   const [imageFailed, setImageFailed] = React.useState(false);
-  const [tracksViewChanges, setTracksViewChanges] = React.useState<boolean>(
-    !!spot.author.avatar_url
-  );
+  const [tracksViewChanges, setTracksViewChanges] = React.useState(true);
+  const trackingTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const scheduleStopTracking = React.useCallback((delayMs: number) => {
+    if (trackingTimerRef.current) {
+      clearTimeout(trackingTimerRef.current);
+    }
+    trackingTimerRef.current = setTimeout(() => {
+      trackingTimerRef.current = null;
+      setTracksViewChanges(false);
+    }, delayMs);
+  }, []);
+
+  const stopTracking = React.useCallback(() => {
+    if (trackingTimerRef.current) {
+      clearTimeout(trackingTimerRef.current);
+      trackingTimerRef.current = null;
+    }
+    setTracksViewChanges(false);
+  }, []);
 
   React.useEffect(() => {
     setImageFailed(false);
-    setTracksViewChanges(!!spot.author.avatar_url);
-  }, [spot.author.avatar_url]);
+    setTracksViewChanges(true);
+    if (spot.author.avatar_url) {
+      // Remote avatar: keep marker live until image load/error, with a generous safety cap.
+      scheduleStopTracking(4000);
+    } else {
+      // Default avatar can freeze sooner after first paint.
+      scheduleStopTracking(900);
+    }
+    return () => {
+      if (trackingTimerRef.current) {
+        clearTimeout(trackingTimerRef.current);
+        trackingTimerRef.current = null;
+      }
+    };
+  }, [scheduleStopTracking, spot.author.avatar_url]);
 
   const coordinate = React.useMemo(
     () => ({ latitude: spot.latitude, longitude: spot.longitude }),
@@ -47,14 +77,16 @@ function AvatarMarkerInner({ spot, onPress }: Props) {
           <Image
             source={{ uri: spot.author.avatar_url }}
             style={styles.avatar}
-            onLoadEnd={() => setTracksViewChanges(false)}
+            onLoadEnd={stopTracking}
             onError={() => {
               setImageFailed(true);
-              setTracksViewChanges(false);
+              setTracksViewChanges(true);
+              // Allow one more render pass so fallback avatar is captured.
+              scheduleStopTracking(260);
             }}
           />
         ) : (
-          <Image source={DEFAULT_AVATAR} style={styles.avatar} />
+          <Image source={DEFAULT_AVATAR} style={styles.avatar} onLoadEnd={() => scheduleStopTracking(120)} />
         )}
       </View>
     </Marker>
@@ -90,7 +122,7 @@ const styles = StyleSheet.create({
     height: 42,
     borderRadius: 21,
     borderWidth: 2,
-    borderColor: "#fff",
+    borderColor: "#E21E4D",
     backgroundColor: "#f4f4f5",
     justifyContent: "center",
     alignItems: "center",

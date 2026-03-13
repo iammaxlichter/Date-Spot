@@ -20,6 +20,9 @@ export function TopOverlay(props: {
   onOpenFilters: () => void;
   hasActiveFilters: boolean;
   activeFilterCount: number;
+  showPartnerSpotsToggle: boolean;
+  partnerSpotsOnly: boolean;
+  onTogglePartnerSpots: () => void;
   onAddSpot: () => void;
 }) {
   const {
@@ -35,6 +38,9 @@ export function TopOverlay(props: {
     onOpenFilters,
     hasActiveFilters,
     activeFilterCount,
+    showPartnerSpotsToggle,
+    partnerSpotsOnly,
+    onTogglePartnerSpots,
     onAddSpot,
   } = props;
 
@@ -75,23 +81,50 @@ export function TopOverlay(props: {
 
         <Pressable style={styles.actionRowSpacer} onPress={Keyboard.dismiss} />
 
-        <TouchableOpacity
-          style={[styles.filtersButton, hasActiveFilters ? styles.filtersButtonActive : null]}
-          onPress={onOpenFilters}
-        >
-          <MaterialIcons
-            name="filter-list"
-            size={20}
-            color={hasActiveFilters ? "#FFFFFF" : "#D91B46"}
-            style={styles.filtersButtonIcon}
-          />
-          <Text
-            style={[styles.filtersButtonText, hasActiveFilters ? styles.filtersButtonTextActive : null]}
+        <View style={styles.rightActionColumn}>
+          <TouchableOpacity
+            style={[styles.filtersButton, hasActiveFilters ? styles.filtersButtonActive : null]}
+            onPress={onOpenFilters}
           >
-            Filters
-          </Text>
-          {hasActiveFilters ? <View style={styles.filtersActiveDot} /> : null}
-        </TouchableOpacity>
+            <MaterialIcons
+              name="filter-list"
+              size={20}
+              color={hasActiveFilters ? "#FFFFFF" : "#D91B46"}
+              style={styles.filtersButtonIcon}
+            />
+            <Text
+              style={[styles.filtersButtonText, hasActiveFilters ? styles.filtersButtonTextActive : null]}
+            >
+              Filters
+            </Text>
+            {hasActiveFilters ? <View style={styles.filtersActiveDot} /> : null}
+          </TouchableOpacity>
+
+          {showPartnerSpotsToggle ? (
+            <TouchableOpacity
+              style={[
+                styles.partnerSpotsButton,
+                partnerSpotsOnly ? styles.partnerSpotsButtonActive : styles.partnerSpotsButtonInactive,
+              ]}
+              onPress={onTogglePartnerSpots}
+            >
+              <MaterialIcons
+                name="place"
+                size={18}
+                color={partnerSpotsOnly ? "#FFFFFF" : "#5B6472"}
+                style={styles.filtersButtonIcon}
+              />
+              <Text
+                style={[
+                  styles.partnerSpotsButtonText,
+                  partnerSpotsOnly ? styles.partnerSpotsButtonTextActive : styles.partnerSpotsButtonTextInactive,
+                ]}
+              >
+                Our Spots
+              </Text>
+            </TouchableOpacity>
+          ) : null}
+        </View>
       </View>
 
       {hasActiveFilters ? (

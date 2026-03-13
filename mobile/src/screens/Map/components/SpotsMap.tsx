@@ -4,19 +4,24 @@ import {
   Animated,
   Dimensions,
   Easing,
+  Image,
   Keyboard,
   StyleSheet,
   Text,
+  TouchableOpacity,
   View,
 } from "react-native";
 import MapView, { Callout, Marker, PROVIDER_GOOGLE, Region, type MarkerPressEvent } from "react-native-maps";
 import type { MapSpot } from "../../../services/api/spots";
+import { supabase } from "../../../services/supabase/client";
 import { GREY_MAP_STYLE } from "../constants";
 import { AvatarMarker } from "./AvatarMarker";
 import { CenterPin } from "./CenterPin";
 
-/* ─── popup positioning constants ─── */
-const POPUP_WIDTH = 280;
+const DEFAULT_AVATAR = require("../../../../assets/default-avatar.png");
+
+/* popup positioning constants */
+const POPUP_WIDTH = 290;
 const MARKER_RADIUS = 21; // matches shell height/2 in AvatarMarker
 const POPUP_GAP = 18;
 const POPUP_TAIL_SIZE = 12;
@@ -28,87 +33,165 @@ function latToMercatorY(lat: number): number {
   return Math.log(Math.tan(Math.PI / 4 + rad / 2));
 }
 
-/* ─── build the one-line summary shown at the top of the popup ─── */
-function buildPopupHeader(spot: MapSpot): string {
+/* the popup card rendered as a plain JS overlay */
+function SpotPopup({ spot, onView }: { spot: MapSpot; onView: () => void }) {
+  const [photoUrls, setPhotoUrls] = React.useState<string[]>([]);
+  const [photoLoading, setPhotoLoading] = React.useState(false);
+
+  React.useEffect(() => {
+    let cancelled = false;
+    setPhotoUrls([]);
+    setPhotoLoading(false);
+
+    (async () => {
+      try {
+        const { data } = await supabase
+          .from("spot_photos")
+          .select("path")
+          .eq("spot_id", spot.id)
+          .order("position", { ascending: true })
+          .order("created_at", { ascending: true })
+          .limit(2);
+
+        if (cancelled) return;
+        const paths = (data ?? []).map((r: any) => r.path as string).filter(Boolean);
+        if (paths.length === 0) return; // no photos — strip stays hidden
+
+        setPhotoLoading(true); // only show spinner once we know photos exist
+
+        const { data: signed } = await supabase.storage
+          .from("spot-photos")
+          .createSignedUrls(paths, 3600);
+
+        if (!cancelled) {
+          setPhotoUrls((signed ?? []).map((item: any) => item?.signedUrl).filter(Boolean));
+          setPhotoLoading(false);
+        }
+      } catch {
+        if (!cancelled) setPhotoLoading(false);
+      }
+    })();
+
+    return () => { cancelled = true; };
+  }, [spot.id]);
+
   const spotName = (spot.name ?? "").trim() || "Date Spot";
-  const authorName = (spot.author.name ?? "").trim() || (spot.author.username ?? "").trim();
+  const authorName =
+    (spot.author.name ?? "").trim() ||
+    (spot.author.username ? `@${spot.author.username}` : "Someone");
+
   const tagged = (spot.tagged_users ?? [])
     .map((u) => (u.name ?? "").trim() || (u.username ?? "").trim())
     .filter(Boolean);
-  const firstThree = tagged.slice(0, 3);
-  const overflow = tagged.length - firstThree.length;
-  const companions = firstThree.length
-    ? firstThree.join(", ") + (overflow > 0 ? ` +${overflow}` : "")
-    : "";
+  const companionText =
+    tagged.length === 1
+      ? `with ${tagged[0]}`
+      : tagged.length === 2
+      ? `with ${tagged[0]} & ${tagged[1]}`
+      : tagged.length > 2
+      ? `with ${tagged[0]} +${tagged.length - 1}`
+      : null;
 
-  if (authorName && companions) return `${authorName} went with ${companions} to ${spotName}`;
-  if (authorName) return `${authorName} went to ${spotName}`;
-  if (companions) return `Went with ${companions} to ${spotName}`;
-  return spotName;
-}
-
-/* ─── the popup card rendered as a plain JS overlay ─── */
-function SpotPopup({ spot }: { spot: MapSpot }) {
-  const headerLine = buildPopupHeader(spot);
-  const hasRatings =
-    spot.atmosphere != null || spot.date_score != null || spot.would_return != null;
-  const hasDetails = spot.vibe || spot.price || spot.best_for;
   const notes = (spot.notes ?? "").trim();
+  const hasScores =
+    spot.date_score != null || spot.atmosphere != null || spot.would_return != null;
+  const hasTags = spot.vibe || spot.price || spot.best_for;
 
   return (
-    <View style={s.popupCard}>
-      <Text style={s.popupHeader} numberOfLines={3} ellipsizeMode="tail">
-        {headerLine}
-      </Text>
-
-      {hasRatings ? (
-        <View style={s.section}>
-          <Text style={s.sectionTitle}>Ratings</Text>
-          {spot.atmosphere != null ? (
-            <View style={s.row}>
-              <Text style={s.k}>Atmosphere</Text>
-              <Text style={s.v}>{spot.atmosphere}</Text>
-            </View>
-          ) : null}
-          {spot.date_score != null ? (
-            <View style={s.row}>
-              <Text style={s.k}>Date score</Text>
-              <Text style={s.v}>{spot.date_score}</Text>
-            </View>
-          ) : null}
-          {spot.would_return != null ? (
-            <View style={s.row}>
-              <Text style={s.k}>Would return</Text>
-              <Text style={s.v}>{spot.would_return ? "Yes" : "No"}</Text>
-            </View>
-          ) : null}
-        </View>
-      ) : null}
-
-      {hasDetails ? (
-        <View style={s.section}>
-          <Text style={s.sectionTitle}>Details</Text>
-          <View style={s.pillRow}>
-            {spot.vibe ? <Text style={s.pill}>{spot.vibe}</Text> : null}
-            {spot.price ? <Text style={s.pill}>{spot.price}</Text> : null}
-            {spot.best_for ? <Text style={s.pill}>{spot.best_for}</Text> : null}
+    <View style={s.popupCard} pointerEvents="box-none">
+      {/* All non-interactive content — passes touches through to the map */}
+      <View pointerEvents="none">
+        {/* Photo strip */}
+        {(photoLoading || photoUrls.length > 0) ? (
+          <View style={[s.photoStrip, photoLoading && s.photoStripLoading]}>
+            {photoLoading ? (
+              <ActivityIndicator size="small" color="#E21E4D" />
+            ) : (
+              <View style={s.photoStripContent}>
+                {photoUrls.map((uri, i) => (
+                  <Image key={i} source={{ uri }} style={s.photoThumb} resizeMode="cover" />
+                ))}
+              </View>
+            )}
           </View>
-        </View>
-      ) : null}
+        ) : null}
 
-      {notes ? (
-        <View style={s.section}>
-          <Text style={s.sectionTitle}>Notes</Text>
-          <Text style={s.notes} numberOfLines={4} ellipsizeMode="tail">
-            {notes}
-          </Text>
+        {/* Author row */}
+        <View style={s.popupAuthorRow}>
+          <Image
+            source={
+              spot.author.avatar_url ? { uri: spot.author.avatar_url } : DEFAULT_AVATAR
+            }
+            style={s.popupAvatar}
+          />
+          <View style={s.popupAuthorInfo}>
+            <Text style={s.popupAuthorName} numberOfLines={1}>
+              {authorName}
+            </Text>
+            {companionText ? (
+              <Text style={s.popupCompanion} numberOfLines={1}>
+                {companionText}
+              </Text>
+            ) : null}
+          </View>
+          {/* spacer so author text doesn't overlap the absolutely-positioned button */}
+          <View style={s.viewBtnSpacer} />
         </View>
-      ) : null}
+
+        {/* Spot name */}
+        <Text style={s.popupSpotName} numberOfLines={2} ellipsizeMode="tail">
+          {spotName}
+        </Text>
+
+        {/* Score chips */}
+        {hasScores ? (
+          <View style={s.popupScoreRow}>
+            {spot.date_score != null ? (
+              <View style={s.chipDate}>
+                <Text style={s.chipDateText}>★ Date Score: {spot.date_score}/10</Text>
+              </View>
+            ) : null}
+            {spot.atmosphere != null ? (
+              <View style={s.chipAtmo}>
+                <Text style={s.chipAtmoText}>✦ Atmosphere: {spot.atmosphere}/10</Text>
+              </View>
+            ) : null}
+            {spot.would_return != null ? (
+              <View style={[s.chipReturn, spot.would_return ? s.chipReturnYes : s.chipReturnNo]}>
+                <Text style={[s.chipReturnText, spot.would_return ? s.chipReturnYesText : s.chipReturnNoText]}>
+                  {spot.would_return ? "Return!" : "✕ Skip"}
+                </Text>
+              </View>
+            ) : null}
+          </View>
+        ) : null}
+
+        {/* Tag pills */}
+        {hasTags ? (
+          <View style={s.popupPillRow}>
+            {spot.vibe ? <Text style={s.popupPill}>{spot.vibe}</Text> : null}
+            {spot.price ? <Text style={s.popupPill}>{spot.price}</Text> : null}
+            {spot.best_for ? <Text style={s.popupPill}>{spot.best_for}</Text> : null}
+          </View>
+        ) : null}
+
+        {/* Notes */}
+        {notes ? (
+          <Text style={s.popupNotes} numberOfLines={2} ellipsizeMode="tail">
+            "{notes}"
+          </Text>
+        ) : null}
+      </View>
+
+      {/* View button — only interactive element, absolutely positioned */}
+      <TouchableOpacity style={s.viewBtn} onPress={onView} activeOpacity={0.75}>
+        <Text style={s.viewBtnText}>View</Text>
+      </TouchableOpacity>
     </View>
   );
 }
 
-/* ─── main component ─── */
+/* main component */
 type ActivePopup = {
   spot: MapSpot;
 };
@@ -125,6 +208,7 @@ export function SpotsMap(props: {
   savingPin?: { latitude: number; longitude: number; name: string } | null;
   onPoiPress?: (coords: { latitude: number; longitude: number }) => void;
   onPinRegionChange?: (coords: { latitude: number; longitude: number }) => void;
+  onViewSpot?: (spotId: string) => void;
 }) {
   const {
     mapRef,
@@ -138,9 +222,25 @@ export function SpotsMap(props: {
     savingPin,
     onPoiPress,
     onPinRegionChange,
+    onViewSpot,
   } = props;
 
   const [mapDragging, setMapDragging] = React.useState(false);
+
+  // Only update after pan ends so the spots array doesn't thrash on every frame
+  const [stableRegion, setStableRegion] = React.useState(region);
+  const renderedSpots = React.useMemo(() => {
+    const PAD = 1.8;
+    const latBuf = (stableRegion.latitudeDelta / 2) * PAD;
+    const lngBuf = (stableRegion.longitudeDelta / 2) * PAD;
+    return spots.filter(
+      (s) =>
+        s.latitude  >= stableRegion.latitude  - latBuf &&
+        s.latitude  <= stableRegion.latitude  + latBuf &&
+        s.longitude >= stableRegion.longitude - lngBuf &&
+        s.longitude <= stableRegion.longitude + lngBuf
+    );
+  }, [spots, stableRegion]);
 
   const [activePopup, setActivePopup] = React.useState<ActivePopup | null>(null);
   const [popupAnchorPoint, setPopupAnchorPoint] = React.useState<{ x: number; y: number } | null>(
@@ -321,6 +421,7 @@ export function SpotsMap(props: {
         }}
         onRegionChangeComplete={(r) => {
           setMapDragging(false);
+          setStableRegion(r);
           if (isPlacingPin) {
             onPinRegionChange?.({ latitude: r.latitude, longitude: r.longitude });
           }
@@ -337,7 +438,7 @@ export function SpotsMap(props: {
           onPoiPress?.({ latitude: coordinate.latitude, longitude: coordinate.longitude });
         }}
       >
-        {spots.map((spot) => (
+        {renderedSpots.map((spot) => (
           <AvatarMarker
             key={spot.id}
             spot={spot}
@@ -358,7 +459,7 @@ export function SpotsMap(props: {
             <Callout tooltip>
               <View style={s.savingCallout}>
                 <ActivityIndicator size="large" color="#E21E4D" style={{ marginRight: 6 }}  />
-                <Text style={s.savingCalloutText}>Saving "{savingPin.name}"…</Text>
+                <Text style={s.savingCalloutText}>Saving "{savingPin.name}"...</Text>
               </View>
             </Callout>
           </Marker>
@@ -368,7 +469,7 @@ export function SpotsMap(props: {
       {/* Center pin for spot placement */}
       {isPlacingPin && <CenterPin dragging={mapDragging} />}
 
-      {/* JS overlay popup — dismissed instantly by setState, no native animation */}
+      {/* JS overlay popup - dismissed instantly by setState, no native animation */}
       {activePopup && popupStyle ? (
         <Animated.View
           style={[
@@ -382,9 +483,9 @@ export function SpotsMap(props: {
               ],
             },
           ]}
-          pointerEvents="none"
+          pointerEvents="box-none"
         >
-          <SpotPopup spot={activePopup.spot} />
+          <SpotPopup spot={activePopup.spot} onView={() => { onViewSpot?.(activePopup.spot.id); dismissPopup(); }} />
           <View style={[s.popupTail, popupTailStyle]} />
         </Animated.View>
       ) : null}
@@ -393,74 +494,165 @@ export function SpotsMap(props: {
 }
 
 const s = StyleSheet.create({
-  /* ── popup overlay ── */
+  /* popup overlay */
   popupAnchor: {
     position: "absolute",
     alignItems: "center",
-    // left, bottom, width set dynamically
   },
   popupCard: {
     width: "100%",
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: "#e8e8e8",
+    borderRadius: 20,
     backgroundColor: "#fff",
-    padding: 12,
+    padding: 14,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.12,
-    shadowRadius: 6,
-    elevation: 4,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.14,
+    shadowRadius: 16,
+    elevation: 8,
   },
-  popupHeader: {
-    fontSize: 14,
-    lineHeight: 20,
-    fontWeight: "800",
-    color: "#111",
-  },
-  section: {
-    marginTop: 10,
-  },
-  sectionTitle: {
-    fontSize: 12,
-    color: "#666",
-    fontWeight: "800",
-    marginBottom: 6,
-  },
-  row: {
+  popupAuthorRow: {
     flexDirection: "row",
-    justifyContent: "space-between",
-    gap: 12,
-    paddingVertical: 2,
+    alignItems: "center",
+    marginBottom: 9,
   },
-  k: {
-    fontSize: 12,
-    color: "#666",
+  popupAvatar: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    marginRight: 8,
+    borderWidth: 1,
+    borderColor: "#E21E4D",
   },
-  v: {
-    fontSize: 12,
+  popupAuthorInfo: {
+    flex: 1,
+  },
+  popupAuthorName: {
+    fontSize: 13,
+    fontWeight: "800",
     color: "#111",
-    fontWeight: "700",
   },
-  pillRow: {
+  popupCompanion: {
+    fontSize: 11,
+    color: "#888",
+    marginTop: 1,
+  },
+  popupSpotName: {
+    fontSize: 17,
+    fontWeight: "900",
+    color: "#111",
+    lineHeight: 22,
+    marginBottom: 10,
+  },
+  popupScoreRow: {
     flexDirection: "row",
     flexWrap: "wrap",
+    gap: 5,
+    marginBottom: 8,
+  },
+  chipDate: {
+    backgroundColor: "#E21E4D",
+    borderRadius: 999,
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+  },
+  chipDateText: {
+    color: "#fff",
+    fontSize: 11,
+    fontWeight: "800",
+  },
+  chipAtmo: {
+    backgroundColor: "#f5f5f5",
+    borderRadius: 999,
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+  },
+  chipAtmoText: {
+    color: "#444",
+    fontSize: 11,
+    fontWeight: "700",
+  },
+  chipReturn: {
+    borderRadius: 999,
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+  },
+  chipReturnYes: {
+    backgroundColor: "#dcfce7",
+  },
+  chipReturnNo: {
+    backgroundColor: "#f5f5f5",
+  },
+  chipReturnText: {
+    fontSize: 11,
+    fontWeight: "700",
+  },
+  chipReturnYesText: {
+    color: "#16a34a",
+  },
+  chipReturnNoText: {
+    color: "#888",
+  },
+  popupPillRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 5,
+    marginBottom: 6,
+  },
+  popupPill: {
+    borderWidth: 1,
+    borderColor: "#fdd5de",
+    borderRadius: 999,
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    backgroundColor: "#fff0f3",
+    color: "#E21E4D",
+    fontSize: 11,
+    fontWeight: "700",
+  },
+  popupNotes: {
+    fontSize: 12,
+    color: "#777",
+    lineHeight: 17,
+    fontStyle: "italic",
+    marginTop: 2,
+  },
+  viewBtn: {
+    position: "absolute",
+    top: 14,
+    right: 14,
+    backgroundColor: "#E21E4D",
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+  },
+  viewBtnText: {
+    color: "#fff",
+    fontSize: 12,
+    fontWeight: "800",
+  },
+  viewBtnSpacer: {
+    width: 70,
+  },
+  photoStrip: {
+    height: 80,
+    marginBottom: 10,
+    borderRadius: 10,
+    overflow: "hidden",
+    justifyContent: "flex-start",
+    alignItems: "flex-start",
+  },
+  photoStripLoading: {
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  photoStripContent: {
+    flexDirection: "row",
     gap: 6,
   },
-  pill: {
-    borderWidth: 1,
-    borderColor: "#ececec",
-    borderRadius: 999,
-    paddingHorizontal: 8,
-    paddingVertical: 5,
-    backgroundColor: "#fafafa",
-    color: "#111",
-    fontSize: 12,
-  },
-  notes: {
-    fontSize: 12,
-    color: "#222",
-    lineHeight: 18,
+  photoThumb: {
+    width: 80,
+    height: 80,
+    borderRadius: 10,
   },
   popupTail: {
     width: POPUP_TAIL_SIZE,
@@ -471,11 +663,11 @@ const s = StyleSheet.create({
     backgroundColor: "#fff",
     borderRightWidth: 1,
     borderBottomWidth: 1,
-    borderRightColor: "#e8e8e8",
-    borderBottomColor: "#e8e8e8",
+    borderRightColor: "rgba(0,0,0,0.06)",
+    borderBottomColor: "rgba(0,0,0,0.06)",
   },
 
-  /* ── saving pin ── */
+  /* saving pin */
   savingShell: {
     width: 42,
     height: 42,

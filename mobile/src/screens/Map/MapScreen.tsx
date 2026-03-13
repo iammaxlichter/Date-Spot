@@ -1,6 +1,6 @@
 // src/screens/Map/MapScreen.tsx
 import React, { useRef, useEffect, useCallback } from "react";
-import { View, ActivityIndicator, Alert, Text, Keyboard } from "react-native";
+import { View, ActivityIndicator, Alert, Text, Keyboard, Image } from "react-native";
 import MapView from "react-native-maps";
 
 import { useFocusEffect } from "@react-navigation/native";
@@ -38,6 +38,11 @@ import {
   withoutPartnerTag,
 } from "../../features/tags/partnerTagging";
 
+function isUserOnSpot(spot: MapSpot, userId: string): boolean {
+  if (spot.user_id === userId) return true;
+  return (spot.tagged_users ?? []).some((user) => user.id === userId);
+}
+
 export default function MapScreen({ navigation }: any) {
   const mapRef = useRef<MapView | null>(null);
   const searchAnimationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -48,6 +53,9 @@ export default function MapScreen({ navigation }: any) {
   const [tagUsersLoading, setTagUsersLoading] = React.useState(false);
   const [activePartner, setActivePartner] = React.useState<TaggedUser | null>(null);
   const [partnerAnswer, setPartnerAnswer] = React.useState<PartnerAnswer>(null);
+  const [viewerUserId, setViewerUserId] = React.useState<string | null>(null);
+  const [mapPartnerId, setMapPartnerId] = React.useState<string | null>(null);
+  const [showPartnerOnly, setShowPartnerOnly] = React.useState(false);
   const [savingPin, setSavingPin] = React.useState<{
     latitude: number;
     longitude: number;
@@ -67,17 +75,40 @@ export default function MapScreen({ navigation }: any) {
   const { region, setRegion, loading, permissionDenied, spots, setSpots } =
     useInitialRegionAndSpots(filters);
   const filteredSpots = React.useMemo(() => applySpotFilters(spots, filters), [spots, filters]);
+  const hasPartnerForMap = React.useMemo(
+    () => Boolean(viewerUserId && mapPartnerId),
+    [viewerUserId, mapPartnerId]
+  );
+  const visibleSpots = React.useMemo(() => {
+    if (!showPartnerOnly || !viewerUserId || !mapPartnerId) return filteredSpots;
+    return filteredSpots.filter(
+      (spot) => isUserOnSpot(spot, viewerUserId) || isUserOnSpot(spot, mapPartnerId)
+    );
+  }, [filteredSpots, showPartnerOnly, viewerUserId, mapPartnerId]);
   const activeFilterCount = React.useMemo(() => getActiveSpotFilterCount(filters), [filters]);
   const hasActiveFilters = React.useMemo(() => hasActiveSpotFilters(filters), [filters]);
 
   const { searchQuery, setSearchQuery, showSuggestions, setShowSuggestions, localMatches } =
-    useSpotSearch(filteredSpots);
+    useSpotSearch(visibleSpots);
 
   const { googleResults, searching, clearGoogleResults } = usePlacesAutocomplete({
     region,
     searchQuery,
     showSuggestions,
   });
+
+  useEffect(() => {
+    const urls = Array.from(
+      new Set(
+        visibleSpots
+          .map((spot) => spot.author.avatar_url)
+          .filter((url): url is string => Boolean(url))
+      )
+    ).slice(0, 120);
+
+    if (urls.length === 0) return;
+    void Promise.allSettled(urls.map((url) => Image.prefetch(url)));
+  }, [visibleSpots]);
 
   const refreshSpots = useCallback(async () => {
     const data = await getFollowedMapSpots(500, filters);
@@ -92,6 +123,46 @@ export default function MapScreen({ navigation }: any) {
       });
     }, [refreshSpots])
   );
+
+  useFocusEffect(
+    useCallback(() => {
+      let cancelled = false;
+
+      const loadMapPartnerContext = async () => {
+        try {
+          const { data: auth, error } = await supabase.auth.getUser();
+          if (error) throw error;
+          const myId = auth.user?.id ?? null;
+          if (!cancelled) setViewerUserId(myId);
+
+          if (!myId) {
+            if (!cancelled) setMapPartnerId(null);
+            return;
+          }
+
+          const partner = await getActivePartner(myId);
+          if (!cancelled) setMapPartnerId(partner?.id ?? null);
+        } catch (e) {
+          console.error("[map] failed to load partner context:", e);
+          if (!cancelled) {
+            setViewerUserId(null);
+            setMapPartnerId(null);
+          }
+        }
+      };
+
+      void loadMapPartnerContext();
+      return () => {
+        cancelled = true;
+      };
+    }, [])
+  );
+
+  useEffect(() => {
+    if (!hasPartnerForMap) {
+      setShowPartnerOnly(false);
+    }
+  }, [hasPartnerForMap]);
 
   const spotCreation = useSpotCreation({
     onSavingStarted: (coords, name) => {
@@ -271,6 +342,9 @@ export default function MapScreen({ navigation }: any) {
           }}
           hasActiveFilters={hasActiveFilters}
           activeFilterCount={activeFilterCount}
+          showPartnerSpotsToggle={hasPartnerForMap}
+          partnerSpotsOnly={showPartnerOnly}
+          onTogglePartnerSpots={() => setShowPartnerOnly((prev) => !prev)}
           onAddSpot={() => spotCreation.startNewSpot(region)}
         />
       )}
@@ -291,13 +365,14 @@ export default function MapScreen({ navigation }: any) {
         mapRef={mapRef}
         region={region}
         onRegionChangeComplete={setRegion}
-        spots={filteredSpots}
+        spots={visibleSpots}
         isPlacingPin={spotCreation.isPlacingPin}
         newSpotCoords={spotCreation.newSpotCoords}
         onDragEnd={spotCreation.updateCoords}
         onPressMap={() => setShowSuggestions(false)}
         savingPin={savingPin}
         onPinRegionChange={spotCreation.updateCoords}
+        onViewSpot={(spotId) => navigation.navigate("SpotDetails", { spotId })}
         onPoiPress={(coords) => {
           animateSearchSelection(coords.latitude, coords.longitude, ZOOM_TO_GOOGLE_PLACE);
           setShowSuggestions(false);

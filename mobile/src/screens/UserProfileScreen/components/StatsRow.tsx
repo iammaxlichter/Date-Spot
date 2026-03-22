@@ -12,12 +12,12 @@ export function StatsRow(props: {
 
   return (
     <View style={s.statsRow}>
-      <Pressable style={s.statBox} onPress={onPressFollowers}>
+      <Pressable style={({ pressed }) => [s.statBox, pressed && { opacity: 0.7 }]} onPress={onPressFollowers}>
         <Text style={s.statNumber}>{followersCount}</Text>
         <Text style={s.statLabel}>Followers</Text>
       </Pressable>
 
-      <Pressable style={s.statBox} onPress={onPressFollowing}>
+      <Pressable style={({ pressed }) => [s.statBox, pressed && { opacity: 0.7 }]} onPress={onPressFollowing}>
         <Text style={s.statNumber}>{followingCount}</Text>
         <Text style={s.statLabel}>Following</Text>
       </Pressable>

@@ -59,43 +59,6 @@ export const navStyles = StyleSheet.create({
     fontSize: 12,
   },
 
-  // FeedHeader
-  headerWrapper: {
-    backgroundColor: "#fff",
-  },
-
-  headerRow: {
-    height: 48,
-    paddingHorizontal: 16,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: "600",
-  },
-
-  menuButton: {
-    paddingVertical: 10,
-    marginLeft: 8,
-    marginTop: 6,
-  },
-
-  menuIcon: {
-    fontSize: 28,
-    fontWeight: "600",
-    color: "#111",
-    lineHeight: 30,
-  },
-
-  avatar: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-  },
-
   drawerContent: {
     paddingHorizontal: 28,
     paddingBottom: 32,

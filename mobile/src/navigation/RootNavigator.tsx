@@ -179,8 +179,7 @@ function NavigatorContent() {
                     name="UserProfile"
                     component={UserProfileScreen}
                     options={{
-                      title: "Profile",
-                      headerShadowVisible: false,
+                      headerShown: false,
                     }}
                   />
 

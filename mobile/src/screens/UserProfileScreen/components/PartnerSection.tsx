@@ -81,7 +81,7 @@ export function PartnerSection(props: Props) {
       const p = await requestPartner(me, them);
 
       const [meU, otherU] = await Promise.all([getUsername(me), getUsername(them)]);
-      const msg = `@${meU} sent a Date Spot partnership request to @${otherU}.`;
+      const msg = `${meU} sent a Date Spot partnership request to ${otherU}.`;
       await insertEventForBoth(p.user_a, p.user_b, p.id, msg);
 
       await refreshPartnershipState(me, them);
@@ -101,7 +101,7 @@ export function PartnerSection(props: Props) {
 
       const updated = await cancelRequest(partnership.id);
       const [meU, otherU] = await Promise.all([getUsername(me), getUsername(them)]);
-      const msg = `@${meU} cancelled their Date Spot partnership request to @${otherU}.`;
+      const msg = `${meU} cancelled their Date Spot partnership request to ${otherU}.`;
       await insertEventForBoth(updated.user_a, updated.user_b, updated.id, msg);
 
       await refreshPartnershipState(me, them);
@@ -148,14 +148,14 @@ export function PartnerSection(props: Props) {
     return (
       <View style={s.partnerCard}>
         <View style={s.partnerHeaderRow}>
-          <Text style={s.partnerTitle}>Date Spot partners</Text>
+          <Text style={s.partnerTitle}>Date Spot Partners</Text>
           {isMyPartner ? (
             <Pressable onPress={onOpenMenu} hitSlop={10}>
               <Text style={s.partnerDots}>⋯</Text>
             </Pressable>
           ) : null}
         </View>
-        <Text style={s.partnerBody}>You're connected.</Text>
+        <Text style={s.partnerBody}>You're connected as Date Spot partners.</Text>
       </View>
     );
   }
@@ -164,12 +164,12 @@ export function PartnerSection(props: Props) {
   if (incoming) {
     return (
       <View style={s.partnerCard}>
-        <Text style={s.partnerTitle}>Partner request</Text>
-        <Text style={[s.partnerBody, { marginTop: 6 }]}>
+        <Text style={s.partnerTitle}>Partner Request</Text>
+        <Text style={[s.partnerBody, { marginTop: 6, marginBottom: 16 }]}>
           This person wants to connect as your Date Spot partner.
         </Text>
 
-        <View style={{ flexDirection: "row", gap: 10, marginTop: 12 }}>
+        <View style={{ flexDirection: "row", gap: 10 }}>
           <Pressable
             onPress={onAccept}
             disabled={partnerUpdating}
@@ -198,8 +198,8 @@ export function PartnerSection(props: Props) {
         disabled={partnerUpdating}
         style={[s.outgoingPill, partnerUpdating && { opacity: 0.6 }]}
       >
-        <Text style={{ fontWeight: "800" }}>
-          {partnerUpdating ? "..." : "Request sent (tap to cancel)"}
+        <Text style={{ fontWeight: "700", fontSize: 14, color: "#6D6D6D" }}>
+          {partnerUpdating ? "Cancelling..." : "Request sent — tap to cancel"}
         </Text>
       </Pressable>
     );
@@ -227,7 +227,7 @@ export function PartnerSection(props: Props) {
       style={[s.primaryWideBtn, partnerUpdating && { opacity: 0.6 }]}
     >
       <Text style={s.primaryWideBtnText}>
-        {partnerUpdating ? "Sending..." : "Ask to be Date Spot partner"}
+        {partnerUpdating ? "Sending..." : "Ask to be Date Spot Partner"}
       </Text>
     </Pressable>
   );

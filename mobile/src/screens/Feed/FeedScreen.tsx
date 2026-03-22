@@ -22,6 +22,7 @@ import { getFollowedDateSpots } from "../../services/api/spots";
 import { applySpotFilters } from "../../utils/filters";
 import { useSpotFiltersStore } from "../../stores/spotFiltersStore";
 import type { SpotFilters } from "../../features/filters/types";
+import { UserAvatar } from "../../components/UserAvatar";
 
 type SpotPhotoPreview = {
   id: string;
@@ -74,16 +75,15 @@ type FeedData = {
 
 function timeAgo(iso: string) {
   const t = new Date(iso).getTime();
-  const s = Math.max(0, Math.floor((Date.now() - t) / 1000));
-  if (s < 60) return `${s}s`;
-  const m = Math.floor(s / 60);
+  const sec = Math.max(0, Math.floor((Date.now() - t) / 1000));
+  if (sec < 60) return `${sec}s`;
+  const m = Math.floor(sec / 60);
   if (m < 60) return `${m}m`;
   const h = Math.floor(m / 60);
   if (h < 24) return `${h}h`;
   const d = Math.floor(h / 24);
   return `${d}d`;
 }
-
 
 async function fetchFeedData(filters: SpotFilters): Promise<FeedData> {
   const { data: userRes, error: userErr } = await supabase.auth.getUser();
@@ -124,11 +124,11 @@ async function fetchFeedData(filters: SpotFilters): Promise<FeedData> {
     author: item.author,
   }));
 
-  const spotIds = spotsRaw.map((s) => s.id);
-  const authorIds = Array.from(new Set(spotsRaw.map((s) => s.user_id)));
+  const spotIds = spotsRaw.map((sp) => sp.id);
+  const authorIds = Array.from(new Set(spotsRaw.map((sp) => sp.user_id)));
 
-  let spots: FeedRow[] = spotsRaw.map((s) => ({
-    ...s,
+  let spots: FeedRow[] = spotsRaw.map((sp) => ({
+    ...sp,
     photos: [],
     tagged_users: [],
     partner_tagged_user_id: null,
@@ -148,11 +148,11 @@ async function fetchFeedData(filters: SpotFilters): Promise<FeedData> {
 
     if (photoResult.error) {
       console.error("[feed] failed to load spot photos:", photoResult.error);
-      spots = spotsRaw.map((s) => ({
-        ...s,
+      spots = spotsRaw.map((sp) => ({
+        ...sp,
         photos: [],
-        tagged_users: tagsBySpot[s.id] ?? [],
-        partner_tagged_user_id: partnerByAuthor[s.user_id] ?? null,
+        tagged_users: tagsBySpot[sp.id] ?? [],
+        partner_tagged_user_id: partnerByAuthor[sp.user_id] ?? null,
       }));
     } else {
       const photoRows =
@@ -175,8 +175,8 @@ async function fetchFeedData(filters: SpotFilters): Promise<FeedData> {
         if (signedErr) {
           console.error("[feed] failed to sign spot photos:", signedErr);
         } else {
-          for (const item of signedData ?? []) {
-            if (item?.path && item?.signedUrl) signedByPath.set(item.path, item.signedUrl);
+          for (const itm of signedData ?? []) {
+            if (itm?.path && itm?.signedUrl) signedByPath.set(itm.path, itm.signedUrl);
           }
         }
       }
@@ -193,11 +193,11 @@ async function fetchFeedData(filters: SpotFilters): Promise<FeedData> {
         photosBySpot.set(r.spot_id, list);
       }
 
-      spots = spotsRaw.map((s) => ({
-        ...s,
-        photos: (photosBySpot.get(s.id) ?? []).filter((p) => !!p.signedUrl),
-        tagged_users: tagsBySpot[s.id] ?? [],
-        partner_tagged_user_id: partnerByAuthor[s.user_id] ?? null,
+      spots = spotsRaw.map((sp) => ({
+        ...sp,
+        photos: (photosBySpot.get(sp.id) ?? []).filter((p) => !!p.signedUrl),
+        tagged_users: tagsBySpot[sp.id] ?? [],
+        partner_tagged_user_id: partnerByAuthor[sp.user_id] ?? null,
       }));
     }
   }
@@ -279,6 +279,7 @@ export default function FeedScreen() {
       ),
     ];
   }, [feedEvents, filteredSpots, filters.sortOption]);
+
   const currentUserId = data?.userId ?? null;
   const pendingIncoming = data?.pendingIncoming ?? [];
   const hideAllBanners =
@@ -289,131 +290,154 @@ export default function FeedScreen() {
     await refetch();
   }, [refetch]);
 
+  const goProfile = (userId: string) => {
+    if (currentUserId && userId === currentUserId) {
+      navigation.navigate("Profile");
+    } else {
+      navigation.navigate("UserProfile", { userId });
+    }
+  };
+
   const renderItem = ({ item }: { item: FeedItem }) => {
+    // Partnership event card
     if (item.kind === "event") {
-      const e = item.event;
+      const ev = item.event;
       return (
         <View style={s.card}>
-          <Text style={{ fontSize: 14, fontWeight: "800", marginBottom: 6 }}>
-            Partnership update
-          </Text>
-          <Text style={{ fontSize: 13, color: "#333" }}>{e.message}</Text>
-          <Text style={{ fontSize: 12, color: "#777", marginTop: 6 }}>
-            {timeAgo(e.created_at)} ago
-          </Text>
+          <View style={s.accentBar} />
+          <View style={s.cardInner}>
+            <Text style={s.eventEyebrow}>Partnership Update</Text>
+            <Text style={s.eventMessage}>{ev.message}</Text>
+            <Text style={s.eventTime}>{timeAgo(ev.created_at)} ago</Text>
+          </View>
         </View>
       );
     }
 
+    // Spot card
     const spot = item.spot;
     const author = spot.author;
-    const avatarSource = author?.avatar_url
-      ? { uri: author.avatar_url }
-      : require("../../../assets/default-avatar.png");
-    const username = author?.username
-      ? `@${author.username}`
-      : author?.name
-        ? author.name
-        : "@unknown";
-
-    const goProfile = (userId: string) => {
-      if (currentUserId && userId === currentUserId) {
-        navigation.navigate("Profile");
-      } else {
-        navigation.navigate("UserProfile", { userId });
-      }
-    };
+    const presentation = buildTagPresentation(spot.tagged_users, spot.partner_tagged_user_id);
 
     return (
-      <View style={s.card}>
-        <Pressable onPress={() => navigation.navigate("SpotDetails", { spotId: spot.id })}>
-          <View style={s.headerRow}>
-            <Pressable onPress={() => goProfile(spot.user_id)} hitSlop={8}>
-              <Image source={avatarSource} style={s.avatar} />
-            </Pressable>
+      <Pressable
+        style={({ pressed }) => [s.card, pressed && { opacity: 0.92 }]}
+        onPress={() => navigation.navigate("SpotDetails", { spotId: spot.id })}
+      >
+        <View style={s.accentBar} />
+        <View style={s.cardInner}>
 
-            <View style={{ flex: 1 }}>
-              <Pressable onPress={() => goProfile(spot.user_id)} hitSlop={8}>
-                <Text style={s.username}>{username}</Text>
-              </Pressable>
-              <Text style={s.time}>{timeAgo(spot.created_at)} ago</Text>
-            </View>
-          </View>
+          {/* Author row */}
+          <Pressable style={s.authorRow} onPress={() => goProfile(spot.user_id)} hitSlop={8}>
+            <UserAvatar uri={author?.avatar_url} size={36} style={s.authorAvatar} />
+            <Text style={s.authorUsername}>
+              {author?.name ?? (author?.username ? `@${author.username}` : "@unknown")}
+            </Text>
+            <Text style={s.authorTime}>{timeAgo(spot.created_at)} ago</Text>
+          </Pressable>
 
-          <Text style={s.spotName}>{spot.name}</Text>
+          {/* Spot name */}
+          <Text style={s.spotName} numberOfLines={2}>{spot.name}</Text>
+
+          {/* Photos */}
           {spot.photos.length > 0 ? (
             <View style={s.photoRow}>
-              {spot.photos.slice(0, 4).map((p) => (
-                <Image key={p.id} source={{ uri: p.signedUrl }} style={s.photoThumb} />
+              {spot.photos.slice(0, 3).map((p) => (
+                <Image key={p.id} source={{ uri: p.signedUrl }} style={s.photoThumb} resizeMode="cover" />
               ))}
             </View>
           ) : null}
 
-          <View style={s.metricsRow}>
-            <Text style={s.metric}>Atmosphere: {spot.atmosphere ?? "—"}</Text>
-            <Text style={s.metric}>Date score: {spot.date_score ?? "—"}</Text>
-          </View>
+          {/* Score chips */}
+          {(spot.date_score != null || spot.atmosphere != null || spot.would_return != null) ? (
+            <View style={s.scoreRow}>
+              {spot.date_score != null ? (
+                <View style={s.chipDate}>
+                  <Text style={s.chipDateText}>{"★"} Date Score: {spot.date_score}/10</Text>
+                </View>
+              ) : null}
+              {spot.atmosphere != null ? (
+                <View style={s.chipAtmo}>
+                  <Text style={s.chipAtmoText}>{"✦"} Atmosphere: {spot.atmosphere}/10</Text>
+                </View>
+              ) : null}
+              {spot.would_return != null ? (
+                <View style={[s.chipReturn, spot.would_return ? s.chipReturnYes : s.chipReturnNo]}>
+                  <Text style={[s.chipReturnText, spot.would_return ? s.chipReturnYesText : s.chipReturnNoText]}>
+                    {spot.would_return ? "Return!" : "Skip"}
+                  </Text>
+                </View>
+              ) : null}
+            </View>
+          ) : null}
 
-          <View style={s.metaRow}>
-            {spot.vibe ? <Text style={s.pill}>{spot.vibe}</Text> : null}
-            {spot.price ? <Text style={s.pill}>{spot.price}</Text> : null}
-            {spot.best_for ? <Text style={s.pill}>{spot.best_for}</Text> : null}
-            <Text style={[s.pill, spot.would_return ? s.pillYes : s.pillNo]}>
-              {spot.would_return ? "Would return" : "Would not return"}
-            </Text>
-          </View>
-        </Pressable>
+          {/* Tag pills */}
+          {(spot.vibe || spot.price || spot.best_for) ? (
+            <View style={s.metaRow}>
+              {spot.vibe ? <Text style={s.pill}>{spot.vibe}</Text> : null}
+              {spot.price ? <Text style={s.pill}>{spot.price}</Text> : null}
+              {spot.best_for ? <Text style={s.pill}>{spot.best_for}</Text> : null}
+            </View>
+          ) : null}
 
-        {(() => {
-          const presentation = buildTagPresentation(spot.tagged_users, spot.partner_tagged_user_id);
-          if (presentation.kind === "none") return null;
-
-          if (presentation.kind === "partner_only") {
-            return (
+          {/* Went with */}
+          {presentation.kind !== "none" ? (
+            <>
+              <View style={s.divider} />
               <View style={s.wentWithRow}>
-                <Text style={s.withPartnerLabel}>
-                  With @{presentation.partner.username ?? "unknown"} {"\u2764"}
-                </Text>
-              </View>
-            );
-          }
-
-          if (presentation.kind === "partner_with_others") {
-            return (
-              <View style={s.wentWithRow}>
-                <Text style={s.withPartnerLabel}>
-                  With @{presentation.partner.username ?? "unknown"} and {presentation.otherCount}{" "}
-                  {presentation.otherCount === 1 ? "other" : "others"}
-                </Text>
-              </View>
-            );
-          }
-
-          return (
-            <View style={s.wentWithRow}>
-              <Text style={s.wentWithLabel}>Went with: </Text>
-              <View style={s.wentWithUsersWrap}>
-                {presentation.users.map((user, idx) => (
-                  <Pressable key={user.id} onPress={() => goProfile(user.id)} hitSlop={8}>
+                <Text style={s.wentWithLabel}>Went with </Text>
+                {presentation.kind === "partner_only" ? (
+                  <Pressable
+                    onPress={(e) => { e.stopPropagation(); goProfile(presentation.partner.id); }}
+                    hitSlop={8}
+                  >
                     <Text style={s.wentWithUser}>
-                      @{user.username ?? "unknown"}
-                      {idx < presentation.users.length - 1 ? ", " : ""}
+                      {presentation.partner.name ||
+                        (presentation.partner.username ? `@${presentation.partner.username}` : "unknown")}
                     </Text>
                   </Pressable>
-                ))}
+                ) : presentation.kind === "partner_with_others" ? (
+                  <Pressable
+                    onPress={(e) => { e.stopPropagation(); goProfile(presentation.partner.id); }}
+                    hitSlop={8}
+                  >
+                    <Text style={s.wentWithUser}>
+                      {presentation.partner.name ||
+                        (presentation.partner.username ? `@${presentation.partner.username}` : "unknown")}
+                      <Text style={s.wentWithLabel}>
+                        {" "}{"&"} {presentation.otherCount}{" "}
+                        {presentation.otherCount === 1 ? "other" : "others"}
+                      </Text>
+                    </Text>
+                  </Pressable>
+                ) : (
+                  <View style={s.wentWithUsersWrap}>
+                    {presentation.users.map((u, idx) => (
+                      <Pressable
+                        key={u.id}
+                        onPress={(e) => { e.stopPropagation(); goProfile(u.id); }}
+                        hitSlop={8}
+                      >
+                        <Text style={s.wentWithUser}>
+                          {u.name || (u.username ? `@${u.username}` : "unknown")}
+                          {idx < presentation.users.length - 1 ? ", " : ""}
+                        </Text>
+                      </Pressable>
+                    ))}
+                  </View>
+                )}
               </View>
-            </View>
-          );
-        })()}
-      </View>
+            </>
+          ) : null}
+        </View>
+      </Pressable>
     );
   };
 
   if (isLoading) {
     return (
       <View style={[s.screen, { justifyContent: "center", alignItems: "center" }]}>
-        <ActivityIndicator size="large"  color="#E21E4D" />
-        <Text style={{ marginTop: 10, textAlign: "center" }}>Loading feed…</Text>
+        <ActivityIndicator size="large" color="#E21E4D" />
       </View>
     );
   }
@@ -433,7 +457,7 @@ export default function FeedScreen() {
                   onResolved={() => void refetch()}
                   onAnyAccepted={() => {
                     bannerLockRef.current = true;
-                    setLocalHideAllBanners(true); // instant hide without waiting for refetch
+                    setLocalHideAllBanners(true);
                     void refetch();
                   }}
                 />
@@ -441,9 +465,11 @@ export default function FeedScreen() {
               : null}
           </View>
         }
-        keyExtractor={(x) => (x.kind === "spot" ? `spot:${x.spot.id}` : `event:${x.event.id}`)}
+        keyExtractor={(x) =>
+          x.kind === "spot" ? `spot:${x.spot.id}` : `event:${x.event.id}`
+        }
         renderItem={renderItem}
-        contentContainerStyle={{ padding: 14, paddingBottom: 110 }}
+        contentContainerStyle={s.listContent}
         refreshControl={
           <RefreshControl
             refreshing={isRefetching}
@@ -456,14 +482,17 @@ export default function FeedScreen() {
         }
         ListEmptyComponent={
           <View style={s.empty}>
+            <Text style={s.emptyEyebrow}>Your Feed</Text>
             <Text style={s.emptyTitle}>No spots yet</Text>
-            <Text style={s.emptyText}>Create your first Date Spot and it&apos;ll show up here.</Text>
+            <Text style={s.emptyText}>
+              Follow people and their Date Spots will show up here.
+            </Text>
           </View>
         }
         ListFooterComponent={
           feedItems.length > 0 ? (
             <View style={s.footer}>
-              <Text style={s.footerText}>You&apos;ve reached the bottom of your feed!</Text>
+              <Text style={s.footerText}>{"You're all caught up!"}</Text>
             </View>
           ) : null
         }
@@ -473,50 +502,124 @@ export default function FeedScreen() {
 }
 
 const s = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: "#fff" },
+  screen: { flex: 1, backgroundColor: "#F7F7F7" },
+  listContent: { paddingHorizontal: 16, paddingTop: 16, paddingBottom: 110 },
+
+  // Card shell
   card: {
     borderWidth: 1,
-    borderColor: "#eee",
-    borderRadius: 14,
-    padding: 14,
-    marginBottom: 12,
+    borderColor: "#EFEFEF",
+    borderRadius: 20,
     backgroundColor: "#fff",
+    marginBottom: 16,
+    overflow: "hidden",
+    shadowColor: "#000",
+    shadowOpacity: 0.06,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 2,
   },
-  headerRow: { flexDirection: "row", alignItems: "center", marginBottom: 10 },
-  avatar: { width: 42, height: 42, borderRadius: 21, marginRight: 10 },
-  username: { fontSize: 14, fontWeight: "800", color: "#111" },
-  time: { fontSize: 12, color: "#777", marginTop: 2 },
-  spotName: { fontSize: 18, fontWeight: "800", marginTop: 4, color: "#111" },
-  photoRow: { flexDirection: "row", gap: 8, marginTop: 10 },
+  accentBar: { height: 4, backgroundColor: "#FDE7ED" },
+  cardInner: { padding: 16 },
+
+  // Author row
+  authorRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 10,
+    marginBottom: 12,
+  },
+  authorAvatar: { backgroundColor: "#EFEFEF" },
+  authorUsername: { fontSize: 14, fontWeight: "700", color: "#1D1D1D", flex: 1 },
+  authorTime: { fontSize: 12, color: "#9D9D9D" },
+
+  // Spot content
+  spotName: {
+    fontSize: 17,
+    fontWeight: "800",
+    color: "#1D1D1D",
+    lineHeight: 22,
+    marginBottom: 10,
+  },
+  photoRow: { flexDirection: "row", gap: 6, marginBottom: 10 },
   photoThumb: {
-    width: 64,
-    height: 64,
+    width: 80,
+    height: 80,
     borderRadius: 10,
-    backgroundColor: "rgba(0,0,0,0.06)",
+    backgroundColor: "#F2F2F2",
   },
-  metricsRow: { flexDirection: "row", gap: 14, marginTop: 10 },
-  metric: { fontSize: 13, color: "#333" },
-  metaRow: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 10 },
+
+  // Score chips
+  scoreRow: { flexDirection: "row", flexWrap: "wrap", gap: 5, marginBottom: 8 },
+  chipDate: {
+    backgroundColor: "#E21E4D",
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+  },
+  chipDateText: { color: "#fff", fontSize: 12, fontWeight: "800" },
+  chipAtmo: {
+    backgroundColor: "#F5F5F5",
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+  },
+  chipAtmoText: { color: "#444", fontSize: 12, fontWeight: "700" },
+  chipReturn: { borderRadius: 999, paddingHorizontal: 10, paddingVertical: 5 },
+  chipReturnYes: { backgroundColor: "#DCFCE7" },
+  chipReturnNo: { backgroundColor: "#F5F5F5" },
+  chipReturnText: { fontSize: 12, fontWeight: "700" },
+  chipReturnYesText: { color: "#16A34A" },
+  chipReturnNoText: { color: "#888" },
+
+  // Tag pills
+  metaRow: { flexDirection: "row", flexWrap: "wrap", gap: 6, marginBottom: 4 },
   pill: {
     borderWidth: 1,
-    borderColor: "#eee",
+    borderColor: "#FDD5DE",
     paddingHorizontal: 10,
-    paddingVertical: 6,
+    paddingVertical: 5,
     borderRadius: 999,
     fontSize: 12,
-    color: "#111",
-    backgroundColor: "#fafafa",
+    fontWeight: "600",
+    color: "#1D1D1D",
+    backgroundColor: "#FFF5F7",
   },
-  pillYes: { backgroundColor: "#f2fff7", borderColor: "#d6ffe6" },
-  pillNo: { backgroundColor: "#fff6f6", borderColor: "#ffe0e0" },
+
+  // Went with
+  divider: { height: 1, backgroundColor: "#F2F2F2", marginVertical: 12 },
+  wentWithRow: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: 4 },
+  wentWithLabel: { fontSize: 13, color: "#6D6D6D", fontWeight: "500" },
+  wentWithUsersWrap: { flexDirection: "row", flexWrap: "wrap", gap: 2 },
+  wentWithUser: { fontSize: 13, color: "#D91B46", fontWeight: "700" },
+
+  // Partnership event card
+  eventEyebrow: {
+    color: "#D91B46",
+    fontSize: 11,
+    fontWeight: "700",
+    letterSpacing: 0.8,
+    textTransform: "uppercase",
+    marginBottom: 6,
+  },
+  eventMessage: { fontSize: 14, color: "#1D1D1D", fontWeight: "500", lineHeight: 20, marginBottom: 6 },
+  eventTime: { fontSize: 12, color: "#9D9D9D" },
+
+  // Empty state
   empty: { alignItems: "center", paddingTop: 80, paddingHorizontal: 24 },
-  emptyTitle: { fontSize: 18, fontWeight: "800", marginBottom: 8 },
-  emptyText: { fontSize: 13, color: "#666", textAlign: "center" },
-  footer: { alignItems: "center", paddingVertical: 100 },
-  footerText: { fontSize: 14, color: "#999", fontStyle: "italic" },
-  wentWithRow: { flexDirection: "row", flexWrap: "wrap", marginTop: 10 },
-  wentWithLabel: { fontSize: 13, color: "#444", fontWeight: "700" },
-  withPartnerLabel: { fontSize: 13, color: "#111", fontWeight: "800" },
-  wentWithUsersWrap: { flexDirection: "row", flexWrap: "wrap" },
-  wentWithUser: { fontSize: 13, color: "#1b5fc6", fontWeight: "700" },
+  emptyEyebrow: {
+    color: "#D91B46",
+    fontSize: 12,
+    fontWeight: "700",
+    letterSpacing: 0.6,
+    textTransform: "uppercase",
+    marginBottom: 8,
+  },
+  emptyTitle: { fontSize: 26, fontWeight: "800", color: "#1D1D1D", marginBottom: 8 },
+  emptyText: { fontSize: 14, color: "#6D6D6D", textAlign: "center", lineHeight: 20 },
+
+  // Footer
+  footer: { alignItems: "center", paddingVertical: 32 },
+  footerText: { fontSize: 13, color: "#C0C0C0", fontWeight: "500" },
 });

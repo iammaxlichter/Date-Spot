@@ -15,11 +15,11 @@ export function AvatarSection(props: {
 
   return (
     <>
-      <Pressable onPress={onPressAvatar} disabled={uploading}>
-        <UserAvatar uri={avatarUrl} size={120} style={s.avatar} />
+      <Pressable onPress={onPressAvatar} disabled={uploading} style={s.avatarRing}>
+        <UserAvatar uri={avatarUrl} size={118} style={s.avatar} />
         {uploading && (
           <View style={s.avatarOverlay}>
-            <ActivityIndicator size="large"  color="#E21E4D" />
+            <ActivityIndicator size="large" color="#E21E4D" />
           </View>
         )}
       </Pressable>

@@ -7,9 +7,9 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import FeedScreen from "../screens/Feed/FeedScreen";
 import type { RootStackParamList } from "./types";
 import { FeedHeader } from "./components/FeedHeader";
-import { navStyles } from "./styles";
 import { useSpotFiltersStore } from "../stores/spotFiltersStore";
 import { getActiveSpotFilterCount, hasActiveSpotFilters } from "../utils/filters";
+import { navStyles } from "./styles";
 
 export type AppDrawerParamList = {
   Feed: undefined;
@@ -81,20 +81,9 @@ export function AppDrawerNavigator() {
     <Drawer.Navigator
       initialRouteName="Feed"
       drawerContent={(props) => <AppDrawerContent {...props} />}
-      screenOptions={({ navigation, route }) => ({
+      screenOptions={{
         headerShadowVisible: false,
-        title: route.name,
-        headerLeft: () => (
-          <TouchableOpacity
-            accessibilityRole="button"
-            accessibilityLabel="Open navigation"
-            style={navStyles.menuButton}
-            onPress={() => navigation.openDrawer()}
-          >
-            <Text style={navStyles.menuIcon}>{"\u2630"}</Text>
-          </TouchableOpacity>
-        ),
-      })}
+      }}
     >
       <Drawer.Screen
         name="Feed"

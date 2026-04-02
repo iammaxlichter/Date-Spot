@@ -13,25 +13,27 @@ export function PartnerMenuModal(props: {
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <View style={s.modalBackdrop}>
-        <View style={s.menuCard}>
+      <Pressable style={s.modalBackdrop} onPress={onClose}>
+        <Pressable style={s.menuCard} onPress={() => {}}>
+          <Text style={s.menuSheetTitle}>Date Spot Partner</Text>
+
           {hasPartner ? (
             <Pressable
               onPress={onRemovePartner}
               disabled={removingPartner}
-              style={[s.menuItem, removingPartner && { opacity: 0.6 }]}
+              style={[s.menuDangerBtn, removingPartner && { opacity: 0.6 }]}
             >
-              <Text style={s.menuDanger}>
-                {removingPartner ? "Removing..." : "Remove Date Spot partner"}
+              <Text style={s.menuDangerBtnText}>
+                {removingPartner ? "Removing..." : "Remove Date Spot Partner"}
               </Text>
             </Pressable>
           ) : null}
 
-          <Pressable onPress={onClose} style={s.menuItem}>
-            <Text style={s.menuCancel}>Close</Text>
+          <Pressable onPress={onClose} style={s.menuCancelBtn}>
+            <Text style={s.menuCancelBtnText}>Close</Text>
           </Pressable>
-        </View>
-      </View>
+        </Pressable>
+      </Pressable>
     </Modal>
   );
 }

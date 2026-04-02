@@ -17,15 +17,15 @@ if (Platform.OS === "android" && UIManager.setLayoutAnimationEnabledExperimental
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
 
-async function getUsername(userId: string): Promise<string> {
+async function getDisplayName(userId: string): Promise<string> {
   const { data, error } = await supabase
     .from("profiles")
-    .select("username")
+    .select("name, username")
     .eq("id", userId)
     .maybeSingle();
 
   if (error) throw error;
-  return data?.username ?? "unknown";
+  return data?.name || data?.username || "unknown";
 }
 
 export function PendingPartnerBanner({ me, partnership, onResolved, onAnyAccepted }: Props) {
@@ -36,7 +36,7 @@ export function PendingPartnerBanner({ me, partnership, onResolved, onAnyAccepte
   React.useEffect(() => {
     (async () => {
       try {
-        const u = await getUsername(partnership.requested_by);
+        const u = await getDisplayName(partnership.requested_by);
         setRequesterUsername(u);
       } catch {
         // ignore
@@ -92,11 +92,11 @@ export function PendingPartnerBanner({ me, partnership, onResolved, onAnyAccepte
         await declineRequest(partnership.id);
       }
 
-      const [meU, otherU] = await Promise.all([getUsername(me), getUsername(otherId)]);
+      const [meU, otherU] = await Promise.all([getDisplayName(me), getDisplayName(otherId)]);
       const msg =
         action === "accept"
-          ? `@${meU} accepted the partnership request with @${otherU}.`
-          : `@${meU} declined the partnership request with @${otherU}.`;
+          ? `${meU} accepted the partnership request with ${otherU}.`
+          : `${meU} declined the partnership request with ${otherU}.`;
 
       await insertEventForBoth(msg);
 
@@ -116,35 +116,40 @@ export function PendingPartnerBanner({ me, partnership, onResolved, onAnyAccepte
 
   return (
     <View style={s.wrap}>
-      <Text style={s.title}>Date partner request</Text>
+      <View style={s.accentBar} />
+      <View style={s.inner}>
+        <Text style={s.eyebrow}>Partner Request</Text>
 
-      {state === "idle" ? (
-        <Text style={s.body}>@{requesterUsername} wants to be your Date Spot partner.</Text>
-      ) : (
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-          <ActivityIndicator size="large"  color="#E21E4D" />
+        {state === "idle" ? (
           <Text style={s.body}>
-            {state === "accepting" ? "Accepting..." : state === "declining" ? "Declining..." : "Updating..."}
+            <Text style={s.boldName}>{requesterUsername}</Text> wants to be your Date Spot partner.
           </Text>
+        ) : (
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+            <ActivityIndicator size="small" color="#E21E4D" />
+            <Text style={s.body}>
+              {state === "accepting" ? "Accepting..." : state === "declining" ? "Declining..." : "Updating..."}
+            </Text>
+          </View>
+        )}
+
+        <View style={s.row}>
+          <Pressable
+            style={[s.btnPrimary, disableAll && { opacity: 0.6 }]}
+            onPress={() => resolveOptimistically("accept")}
+            disabled={disableAll}
+          >
+            <Text style={s.btnPrimaryText}>Accept</Text>
+          </Pressable>
+
+          <Pressable
+            style={[s.btnGhost, disableAll && { opacity: 0.6 }]}
+            onPress={() => resolveOptimistically("decline")}
+            disabled={disableAll}
+          >
+            <Text style={s.btnGhostText}>Decline</Text>
+          </Pressable>
         </View>
-      )}
-
-      <View style={s.row}>
-        <Pressable
-          style={[s.btn, s.btnPrimary, disableAll && { opacity: 0.6 }]}
-          onPress={() => resolveOptimistically("accept")}
-          disabled={disableAll}
-        >
-          <Text style={s.btnPrimaryText}>Accept</Text>
-        </Pressable>
-
-        <Pressable
-          style={[s.btn, s.btnGhost, disableAll && { opacity: 0.6 }]}
-          onPress={() => resolveOptimistically("decline")}
-          disabled={disableAll}
-        >
-          <Text style={s.btnGhostText}>Decline</Text>
-        </Pressable>
       </View>
     </View>
   );
@@ -153,18 +158,46 @@ export function PendingPartnerBanner({ me, partnership, onResolved, onAnyAccepte
 const s = StyleSheet.create({
   wrap: {
     borderWidth: 1,
-    borderColor: "#eee",
-    borderRadius: 14,
-    padding: 14,
-    marginBottom: 12,
+    borderColor: "#EFEFEF",
+    borderRadius: 20,
     backgroundColor: "#fff",
+    marginBottom: 16,
+    overflow: "hidden",
+    shadowColor: "#000",
+    shadowOpacity: 0.06,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 2,
   },
-  title: { fontSize: 14, fontWeight: "800", marginBottom: 6 },
-  body: { fontSize: 13, color: "#333" },
-  row: { flexDirection: "row", gap: 10, marginTop: 12 },
-  btn: { paddingVertical: 10, paddingHorizontal: 14, borderRadius: 10 },
-  btnPrimary: { backgroundColor: "#111" },
-  btnPrimaryText: { color: "#fff", fontWeight: "800" },
-  btnGhost: { borderWidth: 1, borderColor: "#ddd", backgroundColor: "#fff" },
-  btnGhostText: { color: "#111", fontWeight: "800" },
+  accentBar: { height: 4, backgroundColor: "#FDE7ED" },
+  inner: { padding: 16 },
+  eyebrow: {
+    color: "#D91B46",
+    fontSize: 11,
+    fontWeight: "700",
+    letterSpacing: 0.8,
+    textTransform: "uppercase",
+    marginBottom: 8,
+  },
+  body: { fontSize: 14, color: "#6D6D6D", lineHeight: 20, marginBottom: 16 },
+  boldName: { color: "#1D1D1D", fontWeight: "700" },
+  row: { flexDirection: "row", gap: 10 },
+  btnPrimary: {
+    flex: 1,
+    backgroundColor: "#1D1D1D",
+    paddingVertical: 12,
+    borderRadius: 14,
+    alignItems: "center",
+  },
+  btnPrimaryText: { color: "#fff", fontWeight: "700", fontSize: 14 },
+  btnGhost: {
+    flex: 1,
+    borderWidth: 1.5,
+    borderColor: "#EFEFEF",
+    paddingVertical: 12,
+    borderRadius: 14,
+    alignItems: "center",
+    backgroundColor: "#F5F5F5",
+  },
+  btnGhostText: { color: "#1D1D1D", fontWeight: "700", fontSize: 14 },
 });

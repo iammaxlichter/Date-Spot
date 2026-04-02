@@ -12,7 +12,9 @@ export function ProfileHeader(props: {
 
   return (
     <View style={{ alignItems: "center" }}>
-      <UserAvatar uri={avatarUri} size={120} style={s.avatar} />
+      <View style={s.avatarRing}>
+        <UserAvatar uri={avatarUri} size={118} style={s.avatar} />
+      </View>
       {username ? <Text style={s.username}>@{username}</Text> : null}
       <Text style={s.name}>{name ?? "Unknown User"}</Text>
     </View>

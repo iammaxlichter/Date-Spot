@@ -18,6 +18,7 @@ import {
   type SpotRow,
 } from "./api/profileApi";
 
+import { useSpotFiltersStore } from "../../stores/spotFiltersStore";
 import { s } from "./styles";
 import { AvatarSection } from "./components/AvatarSection";
 import { StatsRow } from "./components/StatsRow";
@@ -207,7 +208,7 @@ export default function ProfileScreen() {
       // 3) Create a feed event for BOTH users
       const { data: meProfile, error: meProfileErr } = await supabase
         .from("profiles")
-        .select("username")
+        .select("name, username")
         .eq("id", me)
         .maybeSingle();
 
@@ -215,15 +216,15 @@ export default function ProfileScreen() {
 
       const { data: themProfile, error: themProfileErr } = await supabase
         .from("profiles")
-        .select("username")
+        .select("name, username")
         .eq("id", partner.id)
         .maybeSingle();
 
       if (themProfileErr) throw themProfileErr;
 
-      const meU = meProfile?.username ?? "unknown";
-      const themU = themProfile?.username ?? "unknown";
-      const message = `@${meU} removed @${themU} as their Date Spot partner.`;
+      const meU = meProfile?.name || meProfile?.username || "unknown";
+      const themU = themProfile?.name || themProfile?.username || "unknown";
+      const message = `${meU} removed ${themU} as their Date Spot partner.`;
 
       const { error: eventErr } = await supabase.from("feed_events").insert([
         { user_id: pRow.user_a, type: "partnership", ref_id: pRow.id, message },
@@ -245,38 +246,30 @@ export default function ProfileScreen() {
   }, [partner, removingPartner, loadProfile]);
 
   const header = (
-    <View style={{
-      paddingTop: insets.top + 28,
-      paddingHorizontal: 20,
-      paddingBottom: 32,
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "space-between",
-      backgroundColor: "#FFFFFF",
-    }}>
+    <View style={[s.headerRow, { paddingTop: insets.top + 28 }]}>
       <AppBackButton onPress={() => navigation.goBack()} />
       <Pressable
         onPress={() => navigation.navigate("Settings")}
-        style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1, paddingHorizontal: 8, paddingVertical: 6 })}
+        style={({ pressed }) => [s.settingsBtn, pressed && { opacity: 0.6 }]}
       >
-        <Text style={{ color: "#111", fontWeight: "600", fontSize: 15 }}>Settings</Text>
+        <Text style={s.settingsBtnText}>Settings</Text>
       </Pressable>
     </View>
   );
 
   if (loading || !profile) {
     return (
-      <View style={{ flex: 1, backgroundColor: "#FFFFFF" }}>
+      <View style={s.screen}>
         {header}
         <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-          <ActivityIndicator size="large"  color="#E21E4D" />
+          <ActivityIndicator size="large" color="#E21E4D" />
         </View>
       </View>
     );
   }
 
   return (
-    <View style={{ flex: 1, backgroundColor: "#FFFFFF" }}>
+    <View style={s.screen}>
       {header}
       <ScrollView
         contentContainerStyle={[s.container, { paddingTop: 0 }]}
@@ -305,16 +298,27 @@ export default function ProfileScreen() {
       <StatsRow
         followersCount={profile.followers_count ?? 0}
         followingCount={profile.following_count ?? 0}
+        spotsCount={spots.length}
         onPressFollowers={() => navigation.navigate("Followers", { userId: profile.id })}
         onPressFollowing={() => navigation.navigate("Following", { userId: profile.id })}
+        onPressSpots={() => {}}
       />
+
+      <View style={{ height: 24 }} />
 
       <PartnerCard
         partner={partner}
         partnerLoading={partnerLoading}
+        sharedDatesCount={partner ? spots.filter(spot => spot.tagged_users.some(u => u.id === partner.id)).length : 0}
         onOpenMenu={() => setPartnerMenuOpen(true)}
         onPressPartner={() => navigation.navigate("UserProfile", { userId: partner?.id })}
+        onPressDateCount={() => {
+          useSpotFiltersStore.getState().setShowPartnerOnly(true);
+          navigation.navigate("Search", { screen: "Map" });
+        }}
       />
+
+      <View style={{ height: 24 }} />
 
       <SpotsSection
         spots={spots}

@@ -8,11 +8,13 @@ import {
 } from "react-native";
 import { supabase } from "../../services/supabase/client";
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   getAcceptedPartnershipForUser,
   getActiveBetween,
   PartnershipRow,
 } from "../../services/api/partnerships";
+import { AppBackButton } from "../../components/navigation/AppBackButton";
 
 import { s } from "./styles";
 import { ProfileHeader } from "./components/ProfileHeader";
@@ -57,12 +59,12 @@ async function fetchCounts(userId: string) {
 async function getUsername(id: string): Promise<string> {
   const { data, error } = await supabase
     .from("profiles")
-    .select("username")
+    .select("name, username")
     .eq("id", id)
     .maybeSingle();
 
   if (error) throw error;
-  return data?.username ?? "unknown";
+  return data?.name || data?.username || "unknown";
 }
 
 async function insertEventForBoth(
@@ -81,6 +83,7 @@ async function insertEventForBoth(
 export default function UserProfileScreen({ route }: any) {
   const userId: string = route.params.userId;
   const navigation = useNavigation<any>();
+  const insets = useSafeAreaInsets();
 
   const [loading, setLoading] = React.useState(true);
   const [refreshing, setRefreshing] = React.useState(false);
@@ -282,7 +285,7 @@ export default function UserProfileScreen({ route }: any) {
 
       const meU = await getUsername(currentUserId);
       const themU = await getUsername(userId);
-      const msg = `@${meU} removed @${themU} as their Date Spot partner.`;
+      const msg = `${meU} removed ${themU} as their Date Spot partner.`;
 
       await insertEventForBoth(cancelledRow.user_a, cancelledRow.user_b, cancelledRow.id, msg);
 
@@ -298,18 +301,28 @@ export default function UserProfileScreen({ route }: any) {
     }
   };
 
+  const header = (
+    <View style={[s.headerRow, { paddingTop: insets.top + 28 }]}>
+      <AppBackButton onPress={() => navigation.goBack()} />
+    </View>
+  );
+
   if (loading || !profile) {
     return (
-      <View style={[s.container, { justifyContent: "center" }]}>
-        <ActivityIndicator size="large"  color="#E21E4D" />
+      <View style={s.screen}>
+        {header}
+        <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
+          <ActivityIndicator size="large" color="#E21E4D" />
+        </View>
       </View>
     );
   }
 
   return (
-    <>
+    <View style={s.screen}>
+      {header}
       <ScrollView
-        contentContainerStyle={s.container}
+        contentContainerStyle={[s.container, { paddingTop: 0 }]}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -355,7 +368,6 @@ export default function UserProfileScreen({ route }: any) {
               insertEventForBoth={insertEventForBoth}
               onOpenMenu={() => setPartnerMenuOpen(true)}
             />
-
           </View>
         ) : null}
 
@@ -368,6 +380,6 @@ export default function UserProfileScreen({ route }: any) {
         onRemove={removePartner}
         removing={removingPartner}
       />
-    </>
+    </View>
   );
 }

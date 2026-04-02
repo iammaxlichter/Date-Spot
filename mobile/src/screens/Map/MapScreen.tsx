@@ -55,7 +55,8 @@ export default function MapScreen({ navigation }: any) {
   const [partnerAnswer, setPartnerAnswer] = React.useState<PartnerAnswer>(null);
   const [viewerUserId, setViewerUserId] = React.useState<string | null>(null);
   const [mapPartnerId, setMapPartnerId] = React.useState<string | null>(null);
-  const [showPartnerOnly, setShowPartnerOnly] = React.useState(false);
+  const showPartnerOnly = useSpotFiltersStore((state) => state.showPartnerOnly);
+  const setShowPartnerOnly = useSpotFiltersStore((state) => state.setShowPartnerOnly);
   const [savingPin, setSavingPin] = React.useState<{
     latitude: number;
     longitude: number;

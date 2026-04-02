@@ -5,7 +5,6 @@ import { useFocusEffect } from "@react-navigation/native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { MaterialIcons } from "@expo/vector-icons";
 import { supabase } from "../../services/supabase/client";
-import { navStyles } from "../styles";
 
 export function FeedHeader({
   onOpenDrawer,
@@ -49,35 +48,48 @@ export function FeedHeader({
   );
 
   return (
-    <View style={[navStyles.headerWrapper, { paddingTop: insets.top }]}>
-      <View style={navStyles.headerRow}>
+    <View style={[s.wrapper, { paddingTop: insets.top }]}>
+      <View style={s.row}>
+        {/* Hamburger */}
         <TouchableOpacity
           accessibilityRole="button"
           accessibilityLabel="Open navigation"
-          style={navStyles.menuButton}
+          style={s.iconBtn}
           onPress={onOpenDrawer}
         >
-          <Text style={navStyles.menuIcon}>{"\u2630"}</Text>
+          <MaterialIcons name="menu" size={22} color="#1D1D1D" />
         </TouchableOpacity>
 
-        <View style={styles.rightRow}>
-          {hasActiveFilters ? (
-            <Text style={styles.activeFiltersLabel}>Filters: {activeFilterCount} active</Text>
-          ) : null}
-
-          <TouchableOpacity style={styles.filterBtn} onPress={onOpenFilters}>
-            <MaterialIcons name="filter-list" size={18} color="#111" />
-            {hasActiveFilters ? <View style={styles.activeDot} /> : null}
+        {/* Right actions */}
+        <View style={s.right}>
+          {/* Filter button */}
+          <TouchableOpacity
+            style={[s.filterBtn, hasActiveFilters && s.filterBtnActive]}
+            onPress={onOpenFilters}
+            accessibilityRole="button"
+            accessibilityLabel="Open filters"
+          >
+            <MaterialIcons
+              name="tune"
+              size={18}
+              color={hasActiveFilters ? "#E21E4D" : "#1D1D1D"}
+            />
+            {hasActiveFilters ? (
+              <View style={s.badge}>
+                <Text style={s.badgeText}>{activeFilterCount}</Text>
+              </View>
+            ) : null}
           </TouchableOpacity>
 
-          <TouchableOpacity onPress={onProfile}>
+          {/* Avatar */}
+          <TouchableOpacity onPress={onProfile} style={s.avatarWrap}>
             <Image
               source={
                 avatarUrl
                   ? { uri: avatarUrl }
                   : require("../../../assets/default-avatar.png")
               }
-              style={navStyles.avatar}
+              style={s.avatar}
             />
           </TouchableOpacity>
         </View>
@@ -86,40 +98,83 @@ export function FeedHeader({
   );
 }
 
-const styles = StyleSheet.create({
-  rightRow: {
+const s = StyleSheet.create({
+  wrapper: {
+    backgroundColor: "#FFFFFF",
+    borderBottomWidth: 1,
+    borderBottomColor: "#F2F2F2",
+  },
+  row: {
+    height: 52,
+    paddingHorizontal: 16,
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
+    justifyContent: "space-between",
   },
-  activeFiltersLabel: {
-    fontSize: 12,
-    fontWeight: "700",
-    color: "#1b5fc6",
-    backgroundColor: "#eef4ff",
+
+  // Hamburger button
+  iconBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: "#d7e5ff",
-    borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
+    borderColor: "#EFEFEF",
+    backgroundColor: "#FAFAFA",
+    alignItems: "center",
+    justifyContent: "center",
   },
+
+  // Right side
+  right: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+
+  // Filter button
   filterBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#EFEFEF",
+    backgroundColor: "#FAFAFA",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  filterBtnActive: {
+    borderColor: "#FDD5DE",
+    backgroundColor: "#FFF5F7",
+  },
+  badge: {
+    position: "absolute",
+    top: 5,
+    right: 5,
+    minWidth: 14,
+    height: 14,
+    borderRadius: 7,
+    backgroundColor: "#E21E4D",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 2,
+  },
+  badgeText: {
+    color: "#fff",
+    fontSize: 9,
+    fontWeight: "800",
+    lineHeight: 11,
+  },
+
+  // Avatar
+  avatarWrap: {
+    borderRadius: 20,
+    borderWidth: 2,
+    borderColor: "#FDD5DE",
+    padding: 1,
+  },
+  avatar: {
     width: 34,
     height: 34,
     borderRadius: 17,
-    borderWidth: 1,
-    borderColor: "#ddd",
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#fff",
-  },
-  activeDot: {
-    position: "absolute",
-    top: 7,
-    right: 7,
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: "#d32f2f",
   },
 });

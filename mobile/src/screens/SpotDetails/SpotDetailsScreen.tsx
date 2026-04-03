@@ -20,13 +20,17 @@ export default function SpotDetailsScreen({ route }: any) {
 
   if (d.loading) return <SpotDetailsLoading />;
   if (!d.spot) return null;
+
   const taggedUsers = d.spot.tagged_users ?? [];
   const presentation = buildTagPresentation(taggedUsers, d.activePartnerId);
+  const hasTags = !!(d.spot.vibe || d.spot.price || d.spot.best_for);
+  const hasNotes = d.notes.length > 0;
 
   return (
-    <ScrollView style={s.screen} contentContainerStyle={{ padding: 14, paddingBottom: 24 }}>
+    <ScrollView style={s.screen} contentContainerStyle={s.content}>
       <View style={s.card}>
-        {/* ✅ top-right edit button (only for owner) */}
+        <View style={s.accentBar} />
+
         {d.isOwner ? (
           <Pressable onPress={d.onEdit} hitSlop={10} style={s.editBtn}>
             <Text style={s.editBtnText}>Edit</Text>
@@ -40,18 +44,27 @@ export default function SpotDetailsScreen({ route }: any) {
           onProfilePress={d.onProfilePress}
         />
 
+        <Text style={s.eyebrow}>Date Spot</Text>
         <Text style={s.title}>{d.spot.name}</Text>
         <SpotDetailsPhotos photos={d.photos} enableFullscreen />
+      </View>
 
+      <View style={s.card}>
         <SpotStats
           atmosphere={d.spot.atmosphere}
           dateScore={d.spot.date_score}
           wouldReturn={d.spot.would_return}
         />
+      </View>
 
-        <SpotTags vibe={d.spot.vibe} price={d.spot.price} bestFor={d.spot.best_for} />
+      {hasTags ? (
+        <View style={s.card}>
+          <SpotTags vibe={d.spot.vibe} price={d.spot.price} bestFor={d.spot.best_for} />
+        </View>
+      ) : null}
 
-        {presentation.kind !== "none" ? (
+      {presentation.kind !== "none" ? (
+        <View style={s.card}>
           <View style={s.section}>
             {presentation.kind === "regular" ? (
               <>
@@ -76,15 +89,19 @@ export default function SpotDetailsScreen({ route }: any) {
               </Text>
             )}
           </View>
-        ) : null}
+        </View>
+      ) : null}
 
-        <SpotNotes
-          notes={d.notes}
-          shortNotes={d.shortNotes}
-          expanded={d.expandedNotes}
-          onToggle={() => d.setExpandedNotes((x) => !x)}
-        />
-      </View>
+      {hasNotes ? (
+        <View style={s.card}>
+          <SpotNotes
+            notes={d.notes}
+            shortNotes={d.shortNotes}
+            expanded={d.expandedNotes}
+            onToggle={() => d.setExpandedNotes((x) => !x)}
+          />
+        </View>
+      ) : null}
     </ScrollView>
   );
 }

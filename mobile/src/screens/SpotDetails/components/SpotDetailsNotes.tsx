@@ -15,9 +15,7 @@ export function SpotNotes(props: {
     <View style={s.section}>
       <Text style={s.label}>Notes</Text>
 
-      <Text style={s.notes}>
-        {expanded ? notes || "—" : shortNotes || "—"}
-      </Text>
+      <Text style={s.notes}>{expanded ? notes || "-" : shortNotes || "-"}</Text>
 
       {notes.length > 180 ? (
         <Pressable onPress={onToggle} hitSlop={8}>

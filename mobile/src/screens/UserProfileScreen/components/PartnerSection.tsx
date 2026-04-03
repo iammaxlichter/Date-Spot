@@ -1,5 +1,5 @@
 import React from "react";
-import { View, Text, Pressable, Alert } from "react-native";
+import { View, Text, Pressable, TouchableOpacity, Alert } from "react-native";
 import { s } from "../styles";
 import {
   requestPartner,
@@ -221,14 +221,21 @@ export function PartnerSection(props: Props) {
 
   // Default: request button
   return (
-    <Pressable
-      onPress={onRequest}
-      disabled={partnerUpdating}
-      style={[s.primaryWideBtn, partnerUpdating && { opacity: 0.6 }]}
-    >
-      <Text style={s.primaryWideBtnText}>
-        {partnerUpdating ? "Sending..." : "Ask to be Date Spot Partner"}
+    <View style={s.partnerCard}>
+      <Text style={s.partnerCtaKicker}>Date Spot Partner</Text>
+      <Text style={s.partnerBody}>
+        Send a request to connect as Date Spot partners.
       </Text>
-    </Pressable>
+      <TouchableOpacity
+        onPress={onRequest}
+        disabled={partnerUpdating}
+        activeOpacity={0.85}
+        style={[s.partnerCtaActionBtn, partnerUpdating && { opacity: 0.65 }]}
+      >
+        <Text style={s.partnerCtaActionBtnText}>
+          {partnerUpdating ? "Sending..." : "Ask to Be Date Spot Partner"}
+        </Text>
+      </TouchableOpacity>
+    </View>
   );
 }

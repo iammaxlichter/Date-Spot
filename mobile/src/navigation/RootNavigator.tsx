@@ -11,7 +11,6 @@ import LoginScreen from "../screens/Login/LoginScreen";
 import ProfileScreen from "../screens/Profile/ProfileScreen";
 import SearchScreen from "../screens/Search/SearchScreen";
 import FollowersListScreen from "../screens/FollowersList/FollowersListScreen";
-import FollowingListScreen from "../screens/FollowingList/FollowingListScreen";
 import UserProfileScreen from "../screens/UserProfileScreen/UserProfileScreen";
 import SpotDetailsScreen from "../screens/SpotDetails/SpotDetailsScreen";
 import EditSpotScreen from "../screens/EditSpot/EditSpotScreen";
@@ -204,12 +203,6 @@ function NavigatorContent() {
                   />
 
                   <Stack.Screen
-                    name="Following"
-                    component={FollowingListScreen}
-                    options={{ headerShown: false }}
-                  />
-
-                  <Stack.Screen
                     name="SpotDetails"
                     component={SpotDetailsScreen}
                     options={{
@@ -221,10 +214,7 @@ function NavigatorContent() {
                   <Stack.Screen
                     name="EditSpot"
                     component={EditSpotScreen}
-                    options={{
-                      title: "Edit Date Spot",
-                      headerShadowVisible: false,
-                    }}
+                    options={{ headerShown: false }}
                   />
                 </>
               )}

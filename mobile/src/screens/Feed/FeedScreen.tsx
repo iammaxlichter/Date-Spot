@@ -59,6 +59,14 @@ type FeedEvent = {
   created_at: string;
   message: string;
   type: "partnership";
+  ref_id: string | null;
+  users?: [EventUserMini, EventUserMini];
+};
+
+type EventUserMini = {
+  id: string;
+  name: string | null;
+  username: string | null;
 };
 
 type FeedItem =
@@ -85,6 +93,16 @@ function timeAgo(iso: string) {
   return `${d}d`;
 }
 
+function replaceOnce(source: string, find: string, replaceWith: string) {
+  const idx = source.indexOf(find);
+  if (idx === -1) return source;
+  return `${source.slice(0, idx)}${replaceWith}${source.slice(idx + find.length)}`;
+}
+
+function eventDisplayName(user: EventUserMini) {
+  return (user.name ?? user.username ?? "unknown").trim() || "unknown";
+}
+
 async function fetchFeedData(filters: SpotFilters): Promise<FeedData> {
   const { data: userRes, error: userErr } = await supabase.auth.getUser();
   if (userErr) throw userErr;
@@ -107,7 +125,7 @@ async function fetchFeedData(filters: SpotFilters): Promise<FeedData> {
       .order("created_at", { ascending: false }),
     supabase
       .from("feed_events")
-      .select("id,created_at,message,type")
+      .select("id,created_at,message,type,ref_id")
       .eq("user_id", user.id)
       .order("created_at", { ascending: false })
       .limit(10),
@@ -207,9 +225,53 @@ async function fetchFeedData(filters: SpotFilters): Promise<FeedData> {
   ) as PartnershipRow[];
 
   const evs = (eventsResult.data ?? []) as FeedEvent[];
+  const partnershipIds = Array.from(
+    new Set(evs.map((ev) => ev.ref_id).filter((id): id is string => !!id))
+  );
+
+  let evsWithUsers: FeedEvent[] = evs;
+  if (partnershipIds.length > 0) {
+    const { data: partnerships, error: partnershipsErr } = await supabase
+      .from("partnerships")
+      .select("id,user_a,user_b")
+      .in("id", partnershipIds);
+
+    if (!partnershipsErr && partnerships) {
+      const profileIds = Array.from(
+        new Set(
+          partnerships.flatMap((p: any) => [p.user_a, p.user_b]).filter(Boolean)
+        )
+      );
+
+      const { data: profiles, error: profilesErr } = await supabase
+        .from("profiles")
+        .select("id,name,username")
+        .in("id", profileIds);
+
+      if (!profilesErr && profiles) {
+        const partnershipById = new Map(
+          partnerships.map((p: any) => [p.id as string, p as { id: string; user_a: string; user_b: string }])
+        );
+        const profileById = new Map(
+          profiles.map((p: any) => [p.id as string, p as EventUserMini])
+        );
+
+        evsWithUsers = evs.map((ev) => {
+          if (!ev.ref_id) return ev;
+          const partnership = partnershipById.get(ev.ref_id);
+          if (!partnership) return ev;
+          const userA = profileById.get(partnership.user_a);
+          const userB = profileById.get(partnership.user_b);
+          if (!userA || !userB) return ev;
+          return { ...ev, users: [userA, userB] };
+        });
+      }
+    }
+  }
+
   const feedItems: FeedItem[] = [
     ...spots.map((spot) => ({ kind: "spot" as const, created_at: spot.created_at, spot })),
-    ...evs.map((event) => ({ kind: "event" as const, created_at: event.created_at, event })),
+    ...evsWithUsers.map((event) => ({ kind: "event" as const, created_at: event.created_at, event })),
   ].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
   return {
@@ -302,12 +364,81 @@ export default function FeedScreen() {
     // Partnership event card
     if (item.kind === "event") {
       const ev = item.event;
+      const users = ev.users;
+      const defaultEventMessage = <Text style={s.eventMessage}>{ev.message}</Text>;
+      let eventMessageNode = defaultEventMessage;
+      let eventPeopleNode: React.ReactNode = null;
+
+      if (users && users.length === 2) {
+        const userA = users[0];
+        const userB = users[1];
+        const labelA = eventDisplayName(userA);
+        const labelB = eventDisplayName(userB);
+
+        let firstUser = userA;
+        let firstLabel = labelA;
+        let secondUser = userB;
+        let secondLabel = labelB;
+
+        const aPos = ev.message.indexOf(labelA);
+        const bPos = ev.message.indexOf(labelB);
+        if (aPos >= 0 && bPos >= 0 && bPos < aPos) {
+          firstUser = userB;
+          firstLabel = labelB;
+          secondUser = userA;
+          secondLabel = labelA;
+        }
+
+        const tokenA = "__EVENT_USER_A__";
+        const tokenB = "__EVENT_USER_B__";
+        const tokenized = replaceOnce(replaceOnce(ev.message, firstLabel, tokenA), secondLabel, tokenB);
+        eventPeopleNode = (
+          <Text style={s.eventPeopleRow}>
+            People:{" "}
+            <Text style={s.eventMessageLink} onPress={() => goProfile(firstUser.id)}>
+              {firstLabel}
+            </Text>
+            {" & "}
+            <Text style={s.eventMessageLink} onPress={() => goProfile(secondUser.id)}>
+              {secondLabel}
+            </Text>
+          </Text>
+        );
+
+        if (tokenized.includes(tokenA) && tokenized.includes(tokenB)) {
+          const parts = tokenized.split(/(__EVENT_USER_A__|__EVENT_USER_B__)/g);
+          eventMessageNode = (
+            <Text style={s.eventMessage}>
+              {parts.map((part, idx) => {
+                if (part === tokenA) {
+                  return (
+                    <Text key={`a-${idx}`} style={s.eventMessageLink} onPress={() => goProfile(firstUser.id)}>
+                      {firstLabel}
+                    </Text>
+                  );
+                }
+                if (part === tokenB) {
+                  return (
+                    <Text key={`b-${idx}`} style={s.eventMessageLink} onPress={() => goProfile(secondUser.id)}>
+                      {secondLabel}
+                    </Text>
+                  );
+                }
+                return <Text key={`t-${idx}`}>{part}</Text>;
+              })}
+            </Text>
+          );
+          eventPeopleNode = null;
+        }
+      }
+
       return (
         <View style={s.card}>
           <View style={s.accentBar} />
           <View style={s.cardInner}>
             <Text style={s.eventEyebrow}>Partnership Update</Text>
-            <Text style={s.eventMessage}>{ev.message}</Text>
+            {eventMessageNode}
+            {eventPeopleNode}
             <Text style={s.eventTime}>{timeAgo(ev.created_at)} ago</Text>
           </View>
         </View>
@@ -321,9 +452,10 @@ export default function FeedScreen() {
 
     return (
       <Pressable
-        style={({ pressed }) => [s.card, pressed && { opacity: 0.92 }]}
+        style={({ pressed }) => [s.cardWrap, pressed && { opacity: 0.92 }]}
         onPress={() => navigation.navigate("SpotDetails", { spotId: spot.id })}
       >
+        <View style={s.card}>
         <View style={s.accentBar} />
         <View style={s.cardInner}>
 
@@ -430,6 +562,7 @@ export default function FeedScreen() {
             </>
           ) : null}
         </View>
+        </View>
       </Pressable>
     );
   };
@@ -506,12 +639,13 @@ const s = StyleSheet.create({
   listContent: { paddingHorizontal: 16, paddingTop: 16, paddingBottom: 110 },
 
   // Card shell
+  cardWrap: {},
   card: {
     borderWidth: 1,
     borderColor: "#EFEFEF",
     borderRadius: 20,
     backgroundColor: "#fff",
-    marginBottom: 16,
+    marginBottom: 12,
     overflow: "hidden",
     shadowColor: "#000",
     shadowOpacity: 0.06,
@@ -604,7 +738,12 @@ const s = StyleSheet.create({
     marginBottom: 6,
   },
   eventMessage: { fontSize: 14, color: "#1D1D1D", fontWeight: "500", lineHeight: 20, marginBottom: 6 },
+  eventMessageLink: {
+    color: "#D91B46",
+    fontWeight: "800",
+  },
   eventTime: { fontSize: 12, color: "#9D9D9D" },
+  eventPeopleRow: { fontSize: 12, color: "#6D6D6D", marginBottom: 6 },
 
   // Empty state
   empty: { alignItems: "center", paddingTop: 80, paddingHorizontal: 24 },

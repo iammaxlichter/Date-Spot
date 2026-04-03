@@ -8,6 +8,7 @@ export const s = StyleSheet.create({
 
   container: {
     flexGrow: 1,
+    width: "100%",
     alignItems: "center",
     paddingTop: 48,
     paddingBottom: 120,
@@ -74,12 +75,16 @@ export const s = StyleSheet.create({
 
   statsRow: {
     flexDirection: "row",
-    gap: 10,
-    width: "100%",
-    paddingHorizontal: 24,
+    width: "64%",
+    minWidth: 220,
+    maxWidth: 270,
+    alignSelf: "center",
+    justifyContent: "space-between",
   },
   statBox: {
-    flex: 1,
+    width: "31%",
+    flexGrow: 0,
+    flexShrink: 0,
     alignItems: "center",
     paddingHorizontal: 8,
     paddingVertical: 14,
@@ -93,8 +98,8 @@ export const s = StyleSheet.create({
     shadowOffset: { width: 0, height: 6 },
     elevation: 2,
   },
-  statNumber: { fontSize: 20, fontWeight: "800", color: "#1D1D1D" },
-  statLabel: { marginTop: 4, fontSize: 11, color: "#6D6D6D", textAlign: "center" },
+  statNumber: { width: "100%", fontSize: 20, fontWeight: "800", color: "#1D1D1D", textAlign: "center" },
+  statLabel: { width: "100%", marginTop: 4, fontSize: 11, color: "#6D6D6D", textAlign: "center" },
 
   modalBackdrop: {
     flex: 1,

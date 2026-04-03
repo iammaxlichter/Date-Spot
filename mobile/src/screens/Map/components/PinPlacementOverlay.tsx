@@ -16,13 +16,6 @@ export function PinPlacementOverlay(props: {
 
   return (
     <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
-      {/* Top instruction card */}
-      <View style={[s.topCard, { top: 8 }]} pointerEvents="none">
-        <Text style={s.title}>Drop your pin</Text>
-        <View style={s.divider} />
-        <Text style={s.subtitle}>Move the map to the exact spot, then confirm</Text>
-      </View>
-
       {/* Bottom action bar */}
       <View
         style={[s.bottomBar, { paddingBottom: Math.max(insets.bottom, 24) }]}
@@ -42,40 +35,6 @@ export function PinPlacementOverlay(props: {
 }
 
 const s = StyleSheet.create({
-  topCard: {
-    position: "absolute",
-    left: 16,
-    right: 16,
-    backgroundColor: "#fff",
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: "#E7E7E7",
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    shadowColor: "#000",
-    shadowOpacity: 0.08,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 4,
-    zIndex: 10,
-  },
-  title: {
-    fontSize: 15,
-    fontWeight: "800",
-    color: "#111",
-    marginBottom: 8,
-  },
-  divider: {
-    height: 1,
-    backgroundColor: "#F0F0F0",
-    marginBottom: 8,
-  },
-  subtitle: {
-    fontSize: 13,
-    color: "#777",
-    lineHeight: 18,
-  },
-
   bottomBar: {
     position: "absolute",
     bottom: 0,

@@ -71,6 +71,7 @@ export default function EditSpotScreen({ route, navigation }: any) {
         bestFor={edit.bestFor}
         wouldReturn={edit.wouldReturn}
         title="Edit Date Spot"
+        onBack={() => navigation.goBack()}
         photos={photos}
         selectedTaggedUsers={edit.selectedTaggedUsers}
         eligibleTagUsers={edit.eligibleTagUsers}

@@ -8,6 +8,7 @@ export const s = StyleSheet.create({
 
   container: {
     flexGrow: 1,
+    width: "100%",
     alignItems: "center",
     paddingTop: 48,
     paddingBottom: 120,
@@ -70,12 +71,16 @@ export const s = StyleSheet.create({
 
   statsRow: {
     flexDirection: "row",
-    gap: 10,
-    paddingHorizontal: 24,
-    alignSelf: "stretch",
+    width: "52%",
+    minWidth: 180,
+    maxWidth: 230,
+    alignSelf: "center",
+    justifyContent: "space-between",
   },
   statBox: {
-    flex: 1,
+    width: "48%",
+    flexGrow: 0,
+    flexShrink: 0,
     alignItems: "center",
     paddingHorizontal: 8,
     paddingVertical: 14,
@@ -89,8 +94,8 @@ export const s = StyleSheet.create({
     shadowOffset: { width: 0, height: 6 },
     elevation: 2,
   },
-  statNumber: { fontSize: 20, fontWeight: "800", color: "#1D1D1D" },
-  statLabel: { marginTop: 4, fontSize: 11, color: "#6D6D6D", textAlign: "center" },
+  statNumber: { width: "100%", fontSize: 20, fontWeight: "800", color: "#1D1D1D", textAlign: "center" },
+  statLabel: { width: "100%", marginTop: 4, fontSize: 11, color: "#6D6D6D", textAlign: "center" },
 
   partnerWrap: { width: "100%", paddingHorizontal: 24, marginTop: 24 },
   partnerCard: {
@@ -163,6 +168,38 @@ export const s = StyleSheet.create({
     elevation: 2,
   },
   primaryWideBtnText: { color: "#fff", fontWeight: "700", fontSize: 15 },
+  partnerCtaKicker: {
+    color: "#D91B46",
+    fontSize: 11,
+    fontWeight: "700",
+    letterSpacing: 0.9,
+    textTransform: "uppercase",
+    marginBottom: 8,
+  },
+  partnerCtaActionBtn: {
+    marginTop: 14,
+    alignSelf: "stretch",
+    minHeight: 52,
+    backgroundColor: "#E21E4D",
+    borderWidth: 1.5,
+    borderColor: "#C8143E",
+    borderRadius: 14,
+    paddingVertical: 15,
+    paddingHorizontal: 14,
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#E21E4D",
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 5 },
+    elevation: 5,
+  },
+  partnerCtaActionBtnText: {
+    color: "#FFFFFF",
+    fontWeight: "800",
+    fontSize: 16,
+    letterSpacing: 0.25,
+  },
 
   modalBackdrop: {
     flex: 1,

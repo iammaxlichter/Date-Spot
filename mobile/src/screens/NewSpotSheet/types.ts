@@ -41,6 +41,7 @@ export type Props = {
   onChangeTaggedUsers: (users: TaggedUser[]) => void;
   onChangePartnerAnswer: (answer: PartnerAnswer) => void;
 
+  onBack?: () => void;
   onCancel: () => void;
   onSave: () => void;
 

@@ -12,19 +12,26 @@ export function SpotStats(props: {
 
   return (
     <View style={s.section}>
-      <View style={s.row}>
-        <Text style={s.k}>Atmosphere</Text>
-        <Text style={s.v}>{atmosphere ?? "—"}</Text>
-      </View>
+      <Text style={s.label}>Details</Text>
 
-      <View style={s.row}>
-        <Text style={s.k}>Date score</Text>
-        <Text style={s.v}>{dateScore ?? "—"}</Text>
-      </View>
+      <View style={s.statsGrid}>
+        {dateScore != null ? (
+          <View style={s.chipDate}>
+            <Text style={s.chipDateText}>{dateScore}/10 Date Score</Text>
+          </View>
+        ) : null}
 
-      <View style={s.row}>
-        <Text style={s.k}>Would return</Text>
-        <Text style={s.v}>{wouldReturn ? "Yes" : "No"}</Text>
+        {atmosphere != null ? (
+          <View style={s.chipAtmo}>
+            <Text style={s.chipAtmoText}>Atmosphere {atmosphere}/10</Text>
+          </View>
+        ) : null}
+
+        <View style={[s.chipReturn, wouldReturn ? s.chipReturnYes : s.chipReturnNo]}>
+          <Text style={[s.chipReturnText, wouldReturn ? s.chipReturnYesText : s.chipReturnNoText]}>
+            {wouldReturn ? "Would Return" : "Wouldn't Return"}
+          </Text>
+        </View>
       </View>
     </View>
   );

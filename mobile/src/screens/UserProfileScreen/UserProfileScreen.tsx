@@ -349,8 +349,8 @@ export default function UserProfileScreen({ route }: any) {
         <StatsRow
           followersCount={profile.followers_count ?? 0}
           followingCount={profile.following_count ?? 0}
-          onPressFollowers={() => navigation.navigate("Followers", { userId: profile.id })}
-          onPressFollowing={() => navigation.navigate("Following", { userId: profile.id })}
+          onPressFollowers={() => navigation.navigate("Followers", { userId: profile.id, initialTab: "followers" })}
+          onPressFollowing={() => navigation.navigate("Followers", { userId: profile.id, initialTab: "following" })}
         />
 
         {currentUserId && currentUserId !== userId ? (

@@ -9,7 +9,9 @@ import {
   ScrollView,
   ActivityIndicator,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { styles } from "./styles";
+import { AppBackButton } from "../../components/navigation/AppBackButton";
 import { sanitizeOneToTenInput } from "../../app/utils/numberInputValidation";
 import type { Price, BestFor, VibePreset } from "../../types/datespot";
 import type { TaggedUser } from "../../services/api/spotTags";
@@ -48,6 +50,7 @@ export function NewSpotSheetScreen({
   onChangeWouldReturn,
   onChangeTaggedUsers,
   onChangePartnerAnswer,
+  onBack,
   onCancel,
   onSave,
   isSaving = false,
@@ -111,6 +114,11 @@ export function NewSpotSheetScreen({
 
   return (
     <View style={styles.bottomSheet}>
+      {onBack ? (
+        <SafeAreaView edges={["top"]} style={{ paddingBottom: 20 }}>
+          <AppBackButton onPress={onBack} />
+        </SafeAreaView>
+      ) : null}
       <ScrollView
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="on-drag"

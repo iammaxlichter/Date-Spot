@@ -109,7 +109,7 @@ export function useSpotDetails(args: { spotId: string; navigation: any }) {
 
   const notes = (spot?.notes ?? "").trim();
   const shortNotes =
-    notes.length > 180 ? notes.slice(0, 180).trimEnd() + "…" : notes;
+    notes.length > 180 ? notes.slice(0, 180).trimEnd() + "..." : notes;
 
   const onEdit = React.useCallback(() => {
     if (!spot) return;
@@ -157,3 +157,4 @@ export function useSpotDetails(args: { spotId: string; navigation: any }) {
     activePartnerId,
   };
 }
+

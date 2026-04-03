@@ -24,30 +24,36 @@ export const styles = StyleSheet.create({
   backButton: {
     alignSelf: "flex-start",
     marginTop: 4,
-    marginBottom: 32,
+    marginBottom: 16,
   },
-  hero: {
-    marginBottom: 20,
+
+  tabRow: {
+    flexDirection: "row",
+    borderBottomWidth: 1,
+    borderBottomColor: "#F2F2F2",
+    marginBottom: 16,
+    marginHorizontal: -20,
   },
-  eyebrow: {
-    color: "#D91B46",
-    fontSize: 12,
+  tab: {
+    flex: 1,
+    paddingVertical: 12,
+    alignItems: "center",
+  },
+  tabText: {
+    fontSize: 13,
     fontWeight: "700",
-    letterSpacing: 0.6,
-    textTransform: "uppercase",
-    marginBottom: 6,
+    color: "#9A9A9A",
   },
-  title: {
-    fontSize: 31,
-    lineHeight: 35,
-    fontWeight: "800",
-    color: "#1D1D1D",
-    marginBottom: 8,
+  tabTextActive: {
+    color: "#E21E4D",
   },
-  subtitle: {
-    fontSize: 14,
-    lineHeight: 20,
-    color: "#616161",
+  tabIndicator: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    width: "50%",
+    height: 2,
+    backgroundColor: "#E21E4D",
   },
 
   // Search bar
